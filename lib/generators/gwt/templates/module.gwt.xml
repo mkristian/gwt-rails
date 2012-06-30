@@ -1,0 +1,20 @@
+<module rename-to='<%= application_class_name %>'>
+
+  <inherits name='com.google.gwt.user.User' />
+<% if options[:place] -%>
+
+  <inherits name="com.google.gwt.activity.Activity"/>
+  <inherits name="com.google.gwt.place.Place"/>
+<% end -%>
+
+  <inherits name="com.google.gwt.inject.Inject"/>
+
+  <inherits name="org.fusesource.restygwt.RestyGWT" />
+
+  <inherits name="de.mkristian.gwt.RailsGWT" />
+
+  <entry-point class='<%= base_package %>.<%= application_class_name %>EntryPoint' />
+
+  <stylesheet src='../stylesheets/<%= application_name %>.css' />
+
+</module>

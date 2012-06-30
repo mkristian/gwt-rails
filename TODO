@@ -1,0 +1,19 @@
+-singleton -readonly +gin
+-singleton +readonly +gin
++singleton +readonly +gin
++singleton -readonly +gin
+-singleton -readonly -gin
+-singleton +readonly -gin
++singleton +readonly -gin
++singleton -readonly -gin
+
++singleton -timestamps -optimistic -readonly
++singleton +timestamps -optimistic -readonly
++singleton +timestamps +optimistic -readonly
++singleton +timestamps -optimistic +readonly
++singleton -timestamps -optimistic +readonly
+-singleton -timestamps -optimistic -readonly
+-singleton +timestamps -optimistic -readonly
+-singleton +timestamps +optimistic -readonly
+-singleton +timestamps -optimistic +readonly
+-singleton -timestamps -optimistic +readonly

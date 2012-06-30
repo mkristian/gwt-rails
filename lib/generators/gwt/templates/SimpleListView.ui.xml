@@ -1,0 +1,22 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder
+  xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui">
+
+  <g:FlowPanel styleName="gwt-rails-display <%= application_name.downcase %>-<%= table_name %>">
+
+    <g:Label><%= class_name.underscore.pluralize.humanize %></g:Label>
+
+<% unless options[:read_only] -%>
+    <g:FlowPanel styleName="gwt-rails-buttons">
+      <g:Button ui:field="n_e_w">New</g:Button>
+    </g:FlowPanel>
+
+<% end -%>
+    <g:FlowPanel styleName="gwt-rails-model-list">
+      <g:FlexTable ui:field="list"/>
+    </g:FlowPanel>
+
+  </g:FlowPanel>
+
+</ui:UiBinder>

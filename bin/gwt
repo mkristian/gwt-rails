@@ -1,0 +1,78 @@
+#!/usr/bin/env ruby
+if ARGV[0] =~ /^g/
+  file = File.join('config', 'gwt.yml')
+  if File.exists?(file)
+    require 'yaml'
+    c = YAML.load_file(file)
+    opts = c[ARGV[1]] || []
+    opts = opts.split(/\s+/)
+    opts.each do |opt|
+      if opt =~ /^--/
+        unless ARGV.member?(opt)
+          ARGV << opt
+        end
+      end
+    end
+  end
+  load 'script/rails'
+else
+require 'thor'
+require 'ruby_maven'
+
+class GWTCommand < Thor
+  no_tasks do
+    def mvn
+      @mvn ||= Maven::RubyMaven.new
+    end
+    
+    def exec(*args)
+      ARGV.clear # clean up in case another script gets executed
+      print "maven commandline: "
+      mvn.exec(args)
+    end
+  end
+
+  desc "new APP_PATH GWT_PACKAGE_NAME [rails-options] [-- maven-options]", "create a new rails application with GWT UI given the path of the application and its package for the new GWT module"
+  method_option :session, :type => :boolean, :default => false, :desc => 'adds session support'
+  method_option :menu, :type => :boolean, :default => false, :desc => 'adds menu support'
+  def new(app_path, gwt_package, *args)
+    args = ARGV.dup
+    args.delete('new')
+    args.delete(app_path)
+    args.delete(gwt_package)
+    args.delete_if {|a| a =~ /^--session|^--menu/ }
+    if i = args.index("--")
+      maven_args = args[i..-1]
+      args = i == 0 ? [] : args[0..(i-1)]
+    end
+    margs = ["rails3:new", "-Dargs=\"#{[app_path, args].flatten!.join ' '}\"", "-Dgwt.package=#{gwt_package}", "-Dgwt.session=#{options['session'] || false}", "-Dgwt.menu=#{options['menu'] || false}", maven_args || []].flatten!
+    exec(margs)
+  end
+
+  def help(*args)
+    super
+    exec ["rails3:new", "-Dargs=--help"] if File.exists?('Gemfile')
+  end
+
+  desc "run [maven_options]", "starts the GWT development shell"
+  def server(*args)
+    args = ARGV.dup
+    args.delete('server')
+
+    exec ["gwt:run", args].flatten!
+  end
+
+  desc "compile [maven_options]", "compiles the gwt java code to javascript"
+  def compile(*args)
+    args = ARGV.dup
+    args.delete('compile')
+
+    exec ["compile", "gwt:compile", args].flatten!
+  end
+end
+if ARGV[0] =~ /^r/
+  ARGV[0] = 'server'
+end
+
+  GWTCommand.start
+end

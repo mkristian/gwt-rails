@@ -1,0 +1,47 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder
+  xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui"
+  xmlns:t="urn:import:<%= editors_package %>">
+
+  <g:FlowPanel styleName="gwt-rails-display <%= application_name.downcase %>-<%= table_name %>">
+
+    <g:Label><%if options[:singleton] -%><%= class_name.underscore.singularize.humanize %><% else -%><%= class_name.underscore.pluralize.humanize %><% end -%></g:Label>
+
+<% unless options[:read_only] -%>
+    <g:FlowPanel styleName="gwt-rails-buttons">
+<% unless options[:singleton] -%>
+      <g:Button ui:field="newButton">New</g:Button>
+<% end -%>
+      <g:Button ui:field="editButton">Edit</g:Button>
+      <g:Button ui:field="showButton">Show</g:Button>
+    </g:FlowPanel>
+
+<% end -%>
+    <g:FlowPanel ui:field="model" styleName="gwt-rails-model">
+
+      <t:<%= class_name %>Editor ui:field="editor" styleName="gwt-rails-model-editor" />
+
+<% unless options[:read_only] -%>
+      <g:FlowPanel styleName="gwt-rails-buttons">
+<% unless options[:singleton] -%>
+        <g:Button ui:field="createButton">Create</g:Button>
+<% end -%>
+        <g:Button ui:field="saveButton">Save</g:Button>
+<% unless options[:singleton] -%>
+        <g:Button ui:field="deleteButton">Delete</g:Button>
+<% end -%>
+      </g:FlowPanel>
+
+<% end -%>
+    </g:FlowPanel>
+<% unless options[:singleton] -%>
+    
+    <g:FlowPanel styleName="gwt-rails-model-list">
+      <g:FlexTable ui:field="list"/>
+    </g:FlowPanel>
+<% end -%>
+
+  </g:FlowPanel>
+
+</ui:UiBinder>
