@@ -6,7 +6,8 @@ module Gwt
 
       source_root File.expand_path('templates', File.dirname(__FILE__))
 
-      argument :attributes, :type => :array, :default => [], :banner => "field:type field:type field:belongs_to", :desc => 'if no fields are given and there is a model in RAILS_ROOT/app/models then the attrbutes/properties of the model is the source of the fields'
+      argument(:attributes,       :type => :array, :default => [], 
+               :banner => "field:type field:type field:belongs_to", :desc => 'if no fields are given and there is a model in RAILS_ROOT/app/models then the attrbutes/properties of the model is the source of the fields')
 
       class_option :timestamps,   :type => :boolean, :default => true
       class_option :optimistic,   :type => :boolean, :default => false
@@ -24,6 +25,7 @@ module Gwt
       class_option(:view,         :type => :boolean, :default => false,
                    :desc => 'Simple view classes for manipulating models. Implies editors = true')
       class_option :gin,          :type => :boolean, :default => false
+      class_option :place,        :type => :boolean, :default => false
 
       no_tasks do
 
@@ -45,10 +47,10 @@ module Gwt
               end
               self.options[:singleton] = true if model.respond_to?(:instance)
               self.attributes = attr
-p attr
             end
             self.options[:editor] = true if self.options[:view]
             self.options[:event] = true if self.options[:cache]
+            self.options[:restservice] = true if self.options[:cache]
             self.options.freeze
           end
           
@@ -170,9 +172,67 @@ p attr
                              "#{class_name}Presenter.java"))
         end
       end
+      def create_place_files
+        if options[:place]
+          template('Place.java', 
+                   File.join(java_root, 
+                             places_package.gsub(/\./, "/"), 
+                             class_path, 
+                             "#{class_name}Place.java"))
+          template('PlaceTokenizer.java', 
+                   File.join(java_root, 
+                             places_package.gsub(/\./, "/"), 
+                             class_path, 
+                             "#{class_name}PlaceTokenizer.java"))
+        end
+      end
 
+      def create_activity_file
+        if options[:place]
+          template('Activity.java', 
+                   File.join(java_root, 
+                             activities_package.gsub(/\./, "/"), 
+                             class_path, 
+                             "#{class_name}Activity.java"))
+        end
+      end
+
+      def add_to_activity_factory
+        if options[:place]
+          factory_file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "ActivityFactory.java")
+          if File.exists?(factory_file)
+            factory = File.read(factory_file)
+            if factory =~ /@Named\(.#{table_name}.\)/
+              log 'keep', factory_file
+            else
+              factory.sub! /interface\s+ActivityFactory\s+\{/, "interface ActivityFactory {\n    @Named(\"#{table_name}\") Activity create(#{places_package}.#{class_name}Place place);"
+              File.open(factory_file, 'w') { |f| f.print factory }
+              log "added to", factory_file
+            end
+          end
+        end
+      end
+
+      def add_to_place_history_mapper
+        if options[:place]
+          file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "#{application_class_name}PlaceHistoryMapper.java")
+          if File.exists?(file)
+            content = File.read(file)
+            if content =~ /#{class_name}PlaceTokenizer/
+              log 'keep', file
+            else
+              content.sub! /public\s+#{application_class_name}PlaceHistoryMapper.(.*).\s*\{/ do |m|
+                "public #{application_class_name}PlaceHistoryMapper(#{$1}){\n        register(\"#{table_name}\", new #{places_package}.#{class_name}PlaceTokenizer());"
+              end
+              File.open(file, 'w') { |f| f.print content }
+              log "added to", file
+            end
+          end
+        end
+      end
+ 
       def add_to_module
-        file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "#{application_name}Module.java")
+        file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "#{application_class_name}Module.java")
         if File.exists?(file) && options[:restservice]
           content = File.read(file)
           if content =~ /#{class_name.pluralize}RestService.class/

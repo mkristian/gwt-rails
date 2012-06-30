@@ -19,10 +19,6 @@ module Gwt
         gwt_module_name
       end
 
-      def application_class_name
-        @application_class_name ||= application_name.camelize
-      end
-
       def create_module_file
         template 'module.gwt.xml', File.join(java_root, name.gsub(/\./, '/'), "#{application_class_name}.gwt.xml")
       end
@@ -114,7 +110,7 @@ module Gwt
         template 'page.html', File.join('public', "#{class_name}.html")
         template('gwt.css', 
                  File.join('public', 'stylesheets', "#{application_name}.css"))
-        template 'htaccess', File.join('public', class_name, '.htaccess')
+        template 'htaccess', File.join('public', application_class_name, '.htaccess')
       end
 
       def create_web_xml

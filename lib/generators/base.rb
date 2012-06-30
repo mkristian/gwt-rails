@@ -9,6 +9,10 @@ module Gwt
       #  @application_name ||= Rails.application.class.to_s.gsub(/::/,'').sub(/Application$/, '')
       #end
 
+      def application_class_name
+        @application_class_name ||= application_name.camelize
+      end
+
       def java_root
         @java_root ||= File.join('src', 'main', 'java')
       end
