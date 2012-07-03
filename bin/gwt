@@ -15,6 +15,8 @@ if ARGV[0] =~ /^g/
     end
   end
   load 'script/rails'
+elsif ARGV[0] =~ /^n/
+  load 'script/rails'
 else
 require 'thor'
 require 'ruby_maven'
@@ -27,7 +29,6 @@ class GWTCommand < Thor
     
     def exec(*args)
       ARGV.clear # clean up in case another script gets executed
-      print "maven commandline: "
       mvn.exec(args)
     end
   end
@@ -51,7 +52,7 @@ class GWTCommand < Thor
 
   def help(*args)
     super
-    exec ["rails3:new", "-Dargs=--help"] if File.exists?('Gemfile')
+#    exec ["rails3:new", "-Dargs=--help"] if File.exists?('Gemfile')
   end
 
   desc "run [maven_options]", "starts the GWT development shell"

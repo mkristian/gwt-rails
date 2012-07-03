@@ -78,7 +78,6 @@ public class <%= class_name %>Cache extends AbstractModelCache<<%= class_name %>
 
     @Override
     protected ModelEvent<<%= class_name %>> newEvent(Throwable e) {
-        // TODO something with the throwable e
-        return new <%= class_name %>Event((<%= class_name %>)null, Action.ERROR);
+        return new <%= class_name %>Event(e);
     }
 }

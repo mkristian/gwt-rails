@@ -16,14 +16,14 @@ import <%= gwt_rails_package %>.session.SessionManager;
 <% end -%>
 
 @Singleton
-public class <%= application_name %>PlaceHistoryMapper extends RestfulPlaceHistoryMapper {
+public class <%= application_class_name %>PlaceHistoryMapper extends RestfulPlaceHistoryMapper {
 <% if options[:session] -%>
 
     private final SessionManager<User> manager;
 <% end -%>
 
     @Inject
-    public <%= application_name %>PlaceHistoryMapper(<% if options[:session] -%>SessionManager<User> manager<% end -%>){
+    public <%= application_class_name %>PlaceHistoryMapper(<% if options[:session] -%>SessionManager<User> manager<% end -%>){
 <% if options[:session] -%>
         this.manager = manager;
 <% end -%>

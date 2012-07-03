@@ -30,4 +30,8 @@ public interface <%= class_name %>View extends IsWidget {
 
     void reset(<%= class_name %> model);
 <% end -%>
+<% if options[:place] -%>
+
+    boolean isDirty();
+<% end -%>
 }

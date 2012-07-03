@@ -15,11 +15,10 @@ plugin('org.codehaus.mojo:gwt-maven-plugin', GWT_VERSION) do |gwt|
              :hostedWebapp => "${basedir}/public",
              :inplace => true,
              :logLevel => "INFO",
-             :style => "DETAILED",
              :treeLogger => true,
              :extraJvmArgs => "-Xmx512m",
-             :runTarget => "<%= application_name %>.html",
-             :includes => "**/<%= application_class_name %>GWTTestSuite.java"
+             :gen => "${project.directory}/generated",
+             :runTarget => "gwt_rails.html"
            })
   gwt.executions.goals << ["clean", "compile", "test"]
 end
@@ -41,4 +40,24 @@ end
 # latest version
 jar 'org.jruby.rack:jruby-rack', '1.1.7'
 
+profile :development do |p|
+  p.activation.by_default
+  p.plugin('org.codehaus.mojo:gwt-maven-plugin', GWT_VERSION) do |gwt|
+    gwt.with({ :module => 'com.example.GwtRailsDevelopment',
+               :style => "DETAILED",
+               :includes => "**/GwtRailsGWTTestSuite.java",
+               :draftCompile => true })
+  end
+end
+
+profile :production do |p|
+  p.plugin('org.codehaus.mojo:gwt-maven-plugin', GWT_VERSION) do |gwt|
+    gwt.with({ :module => 'com.example.GwtRails',
+               :style => "OBF",
+               :draftCompile => false,
+               :disableClassMetadata => true,
+               :disableCastChecking => true,
+               :optimizationLevel => 9})
+  end
+end
 # vim: syntax=Ruby

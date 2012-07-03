@@ -48,6 +48,9 @@ public class <%= class_name %>ListViewImpl extends Composite implements <%= clas
 <% end -%>
     @UiField FlexTable list;
 
+<% if options[:gin] -%>
+    @Inject
+<% end -%>
     public <%= class_name %>ListViewImpl() {
         initWidget(BINDER.createAndBindUi(this));
     }

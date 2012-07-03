@@ -12,7 +12,11 @@ import <%= gwt_rails_package %>.events.ModelEventHandler;
 public class <%= class_name %>Event extends ModelEvent<<%= class_name %>> {
 
     public static final Type<ModelEventHandler<<%= class_name %>>> TYPE = new Type<ModelEventHandler<<%= class_name %>>>();
-    
+
+    public <%= class_name %>Event(Throwable throwable){
+        super(throwable);
+    }
+
     public <%= class_name %>Event(<%= class_name %> model, ModelEvent.Action action) {
         super(model, action);
     }

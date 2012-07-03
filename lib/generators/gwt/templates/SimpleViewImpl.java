@@ -1,5 +1,6 @@
 package <%= views_package %>;
 
+import <%= base_package %>.<%= application_class_name %>Confirmation;
 import <%= editors_package %>.<%= class_name %>Editor;
 import <%= models_package %>.<%= class_name %>;
 import <%= presenters_package %>.<%= class_name %>Presenter;
@@ -16,6 +17,7 @@ import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.Widget;
 
 <% if options[:gin] -%>
+import javax.inject.Inject;
 import javax.inject.Singleton;
 <% end -%>
 
@@ -33,10 +35,13 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   private final EditorDriver editorDriver = GWT.create(EditorDriver.class);
 
+  private final GwtRailsConfirmation confirmation;  
+
   private <%= class_name %>Presenter presenter;
 <% if options[:cache] && options[:timestamps] -%>
-  private boolean editable;
+  private boolean editable = false;
 <% end -%>
+  private boolean dirty = false;
 
   @UiField <%= class_name %>Editor editor;
 <% unless options[:singleton] -%>
@@ -58,9 +63,13 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 <% end -%>
 <% end -%>
 
-  public <%= class_name %>ViewImpl() {
-    initWidget(BINDER.createAndBindUi(this));
-    editorDriver.initialize(editor);
+<% if options[:gin] -%>
+  @Inject
+<% end -%>
+  public <%= class_name %>ViewImpl(GwtRailsConfirmation confirmation) {
+      this.confirmation = confirmation;
+      initWidget(BINDER.createAndBindUi(this));
+      editorDriver.initialize(editor);
   }
 
   @Override
@@ -94,17 +103,18 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   @Override
   public void reload(<%= class_name %> model){
+      // inherit editable from screen before
 <% unless options[:singleton] -%>
       n_e_w.setVisible(true);
       create.setVisible(false);
-      delete.setVisible(true);
+      delete.setVisible(false);
 <% end -%>
       reload.setVisible(true);
       edit.setVisible(false);
       save.setVisible(false);
       cancel.setVisible(false);
       editorDriver.edit(model);
-      editor.setEnabled(true);
+      editor.setEnabled(editable);
   }
 <% end -%>
 
@@ -130,6 +140,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   @Override
   public void new<%= class_name %>(){
+      editable = true;
 <% unless options[:singleton] -%>
       n_e_w.setVisible(false);
       create.setVisible(true);
@@ -159,7 +170,8 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   @UiHandler("list")
   void onListClick(ClickEvent event) {
-    presenter.listAll();
+      initDirty();
+      presenter.listAll();
   }
 <% end -%>
 <% unless options[:readonly] -%>
@@ -167,40 +179,65 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   @UiHandler("n_e_w")
   void onNewClick(ClickEvent event) {
-    presenter.new<%= class_name %>();
+      initDirty();
+      presenter.new<%= class_name %>();
   }
   
   @UiHandler("create")
   void onCreateClick(ClickEvent event) {
-    presenter.create(editorDriver.flush());
+      dirty = false;
+      presenter.create(editorDriver.flush());
   }
 
   @UiHandler("delete")
   void onDeleteClick(ClickEvent event) {
-      presenter.delete(editorDriver.flush());
+      String message = editorDriver.isDirty() ?
+          "really delete ? there are unsaved data !" :
+          "really delete ?";
+      if (confirmation.confirm(message)){
+          presenter.delete(editorDriver.flush());
+      }
   }
 <% end -%>
 <% if options[:optimistic] -%>
 
   @UiHandler("reload")
   void onReloadClick(ClickEvent event) {
-      presenter.show(editor.id.getValue());
+      dirty = false;
+      if (editable) {
+          presenter.edit(editor.id.getValue());
+      }
+      else {
+          presenter.show(editor.id.getValue());
+      }
   }
 <% end -%>
 
   @UiHandler("edit")
   void onEditClick(ClickEvent event) {
-    presenter.edit(editor.id.getValue());
+      initDirty();
+      presenter.edit(editor.id.getValue());
   }
 
   @UiHandler("save")
   void onSaveClick(ClickEvent event) {
-    presenter.save(editorDriver.flush());
+      dirty = false;
+      presenter.save(editorDriver.flush());
   }
 
   @UiHandler("cancel")
   void onCancelClick(ClickEvent event) {
+      dirty = false;
       presenter.show(editor.id.getValue());
   }
 <% end -%>
+
+  private void initDirty(){
+      dirty = editable && (editorDriver == null ? false : editorDriver.isDirty());
+  }
+
+  @Override
+  public boolean isDirty() {
+      return dirty;
+  }
 }

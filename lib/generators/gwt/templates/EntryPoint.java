@@ -1,13 +1,7 @@
 package <%= base_package %>;
 
-<% if options[:menu] -%>
-import <%= managed_package %>.<%= application_class_name %>MenuPanel;
-<% end -%>
 import <%= managed_package %>.<%= application_class_name %>Module;
 
-<% if options[:place] -%>
-import com.google.gwt.activity.shared.ActivityManager;
-<% end -%>
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.inject.client.GinModules;
@@ -15,12 +9,8 @@ import com.google.gwt.inject.client.Ginjector;
 <% if options[:place] -%>
 import com.google.gwt.place.shared.PlaceHistoryHandler;
 <% end -%>
-import com.google.gwt.user.client.ui.Panel;
-import com.google.gwt.user.client.ui.RootPanel;
-import com.google.inject.Inject;
 
 import <%= gwt_rails_package %>.Application;
-import <%= gwt_rails_package %>.Notice;
 import <%= gwt_rails_package %>.dispatchers.DefaultDispatcherSingleton;
 
 import org.fusesource.restygwt.client.Defaults;

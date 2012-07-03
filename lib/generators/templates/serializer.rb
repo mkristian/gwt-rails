@@ -1,6 +1,6 @@
-require 'babel/serializer'
+require 'ixtlan/babel/serializer'
 
-class <%= class_name %>Serializer < Babel::Serializer
+class <%= class_name %>Serializer < Ixtlan::Babel::Serializer
 
   model <%= class_name %>
 

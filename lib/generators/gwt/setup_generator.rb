@@ -10,10 +10,14 @@ module Gwt
       
       argument :gwt_module_name, :type => :string, :required => true
 
-      class_option :place, :type => :boolean, :default => false
-      class_option :session, :type => :boolean, :default => false
-      class_option :menu, :type => :boolean, :default => false
-      class_option :remote_users, :type => :boolean, :default => false
+      class_option :place,         :type => :boolean, :default => false
+      #class_option :session,      :type => :boolean, :default => false
+      class_option :gin,           :type => :boolean, :default => false
+      class_option :serializer,    :type => :boolean, :default => false
+      class_option :optimistic,    :type => :boolean, :default => false
+      class_option :timestamp,     :type => :boolean, :default => false
+      class_option :menu,          :type => :boolean, :default => false
+      #class_option :remote_users, :type => :boolean, :default => false
      
       def name
         gwt_module_name
@@ -40,7 +44,7 @@ module Gwt
                  File.join(java_root, 
                            base_package.gsub(/\./, '/'), 
                            "#{application_class_name}EntryPoint.java"))
-        template("#{'Simple' unless options[:place]}GwtApplication.java", 
+        template("SimpleGwtApplication.java", 
                  File.join(java_root, 
                            base_package.gsub(/\./, '/'), 
                            "#{application_class_name}Application.java"))
@@ -68,6 +72,9 @@ module Gwt
 
       def create_scaffolded_files
         path = base_package.gsub(/\./, '/')
+        template('Confirmation.java', 
+                 File.join(java_root, path, 
+                           "#{application_class_name}Confirmation.java"))
         if options[:place]
           template('ActivityPlaceActivityMapper.java', 
                    File.join(java_root, path, 
@@ -107,7 +114,7 @@ module Gwt
       end
 
       def create_html
-        template 'page.html', File.join('public', "#{class_name}.html")
+        template 'page.html', File.join('public', "#{application_name}.html")
         template('gwt.css', 
                  File.join('public', 'stylesheets', "#{application_name}.css"))
         template 'htaccess', File.join('public', application_class_name, '.htaccess')
@@ -143,6 +150,63 @@ EOF
         file = File.join('app', 'controllers', 'application_controller.rb')
         app_controller = File.read(file)
         changed = false
+        unless app_controller =~ /respond_to\s+:json/
+          changed = true
+          app_controller.sub! /ActionController::Base$/, <<SESSION
+
+  respond_to :json
+
+  rescue_from ActiveRecord::RecordNotFound do
+    head :not_found
+  end
+SESSION
+        end
+        if options[:optimistic]
+          unless app_controller =~ /head\s+:conflict/
+            changed = true
+            app_controller.sub! /rescue_from/, 'rescue_from Ixtlan::Optimistic::ObjectStaleException do
+    head :conflict
+  end
+
+  rescue_from'
+          end
+        end  
+        if options[:serializer]
+          unless app_controller =~ /def\s+cleanup/
+            changed = true
+            app_controller.sub! /^end\s*$/, <<SESSION
+  protected
+
+  before_filter :cleanup
+
+  def cleanup(model)
+    # compensate the shortcoming of the incoming json/xml
+    model ||= []
+    model.delete :id
+    model.delete :created_at
+    params[:updated_at] ||= model.delete :updated_at
+  end
+end
+SESSION
+          end
+        end
+        if options[:serializer]
+          unless app_controller =~ /def\s+serializer/
+            changed = true
+            app_controller.sub! /^end\s*$/, <<SESSION
+
+  protected
+
+  def serializer(resource)
+    if resource
+      @_factory ||= Ixtlan::Babel::Factory.new
+      @_factory.new(resource)
+    end
+  end
+end
+SESSION
+          end
+        end
         unless app_controller =~ /def\s+csrf/
           changed = true
           app_controller.sub! /^end\s*$/, <<SESSION
