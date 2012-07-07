@@ -35,10 +35,10 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   private final EditorDriver editorDriver = GWT.create(EditorDriver.class);
 
-  private final GwtRailsConfirmation confirmation;  
+  private final <%= application_class_name %>Confirmation confirmation;  
 
   private <%= class_name %>Presenter presenter;
-<% if options[:cache] && options[:timestamps] -%>
+<% if options[:cache] && options[:timestamps] || options[:optimistic] -%>
   private boolean editable = false;
 <% end -%>
   private boolean dirty = false;
@@ -47,7 +47,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 <% unless options[:singleton] -%>
   @UiField Button list;
 <% end -%>
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
 <% unless options[:singleton] -%>
   @UiField Button n_e_w;
 <% end -%>
@@ -55,7 +55,9 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
   @UiField Button reload;
 <% end -%>
   @UiField Button edit;
+<% unless options[:singleton] -%>
   @UiField Button create;
+<% end -%>
   @UiField Button save;
   @UiField Button cancel;
 <% unless options[:singleton] -%>
@@ -66,7 +68,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 <% if options[:gin] -%>
   @Inject
 <% end -%>
-  public <%= class_name %>ViewImpl(GwtRailsConfirmation confirmation) {
+  public <%= class_name %>ViewImpl(<%= application_class_name %>Confirmation confirmation) {
       this.confirmation = confirmation;
       initWidget(BINDER.createAndBindUi(this));
       editorDriver.initialize(editor);
@@ -79,10 +81,10 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   @Override
   public void show(<%= class_name %> model){
-<% if options[:cache] && options[:timestamps] -%>
+<% if options[:cache] && options[:timestamps] || options[:optimistic] -%>
       editable = false;
 <% end -%>
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
 <% unless options[:singleton] -%>
       n_e_w.setVisible(true);
       create.setVisible(false);
@@ -98,7 +100,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
       editorDriver.edit(model);
       editor.setEnabled(false);
   }
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
 <% if options[:optimistic] -%>
 
   @Override
@@ -120,7 +122,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   @Override
   public void edit(<%= class_name %> model){
-<% if options[:cache] && options[:timestamps] -%>
+<% if options[:cache] && options[:timestamps] || options[:optimistic] -%>
       editable = true;
 <% end -%>
 <% unless options[:singleton] -%>
@@ -137,10 +139,13 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
       editorDriver.edit(model);
       editor.setEnabled(<% if options[:cache] && options[:timestamps] -%>model.getUpdatedAt() != null<% else -%>true<% end -%>);
   }
+<% unless options[:singleton] -%>
 
   @Override
   public void new<%= class_name %>(){
+<% if options[:cache] && options[:timestamps] || options[:optimistic] -%>
       editable = true;
+<% end -%>
 <% unless options[:singleton] -%>
       n_e_w.setVisible(false);
       create.setVisible(true);
@@ -155,6 +160,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
       editorDriver.edit(new <%= class_name %>());
       editor.setEnabled(true);
   }
+<% end -%>
 <% end -%>
 <% if options[:cache] -%>
 
@@ -174,7 +180,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
       presenter.listAll();
   }
 <% end -%>
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
 <% unless options[:singleton] -%>
 
   @UiHandler("n_e_w")
@@ -199,16 +205,16 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
       }
   }
 <% end -%>
-<% if options[:optimistic] -%>
+<% if options[:optimistic] && !options[:read_only] -%>
 
   @UiHandler("reload")
   void onReloadClick(ClickEvent event) {
       dirty = false;
       if (editable) {
-          presenter.edit(editor.id.getValue());
+          presenter.edit(<% unless options[:singleton] %>editor.id.getValue()<% end -%>);
       }
       else {
-          presenter.show(editor.id.getValue());
+          presenter.show(<% unless options[:singleton] %>editor.id.getValue()<% end -%>);
       }
   }
 <% end -%>
@@ -216,7 +222,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
   @UiHandler("edit")
   void onEditClick(ClickEvent event) {
       initDirty();
-      presenter.edit(editor.id.getValue());
+      presenter.edit(<% unless options[:singleton] %>editor.id.getValue()<% end -%>);
   }
 
   @UiHandler("save")
@@ -228,12 +234,12 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
   @UiHandler("cancel")
   void onCancelClick(ClickEvent event) {
       dirty = false;
-      presenter.show(editor.id.getValue());
+      presenter.show(<% unless options[:singleton] %>editor.id.getValue()<% end -%>);
   }
 <% end -%>
 
   private void initDirty(){
-      dirty = editable && (editorDriver == null ? false : editorDriver.isDirty());
+      dirty = <% if options[:cache] && options[:timestamps] || options[:optimistic] -%>editable && <% end -%>(editorDriver == null ? false : editorDriver.isDirty());
   }
 
   @Override

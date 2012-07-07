@@ -3,7 +3,7 @@ package <%= presenters_package %>;
 
 import <%= base_package %>.<%= application_class_name %>ErrorHandler;
 <% if options[:cache] -%>
-import <%= caches_package %>.<%= class_name %>Cache;
+import <%= caches_package %>.<%= class_name %>Cache<% if options[:store] -%>Store<% end -%>;
 import <%= events_package %>.<%= class_name %>Event;
 import <%= events_package %>.<%= class_name %>EventHandler;
 <% end -%>
@@ -16,6 +16,10 @@ import <%= views_package %>.<%= class_name %>ListView;
 <% end -%>
 import <%= views_package %>.<%= class_name %>View;
 import <%= restservices_package %>.<%= class_name.pluralize %>RestService;
+<% unless options[:cache] -%>
+
+import java.util.List;
+<% end -%>
 
 <% if options[:gin] -%>
 import javax.inject.Inject;
@@ -33,8 +37,8 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
 import org.fusesource.restygwt.client.Method;
 import org.fusesource.restygwt.client.MethodCallback;
 
-<% if options[:cache] -%>
 import <%= gwt_rails_package %>.ErrorHandler.Type;
+<% if options[:cache] -%>
 import <%= gwt_rails_package %>.events.ModelEvent;
 <% end -%>
 <% if options[:place] -%>
@@ -49,7 +53,7 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
 <% end -%>
     private final <%= class_name.pluralize %>RestService service<% unless options[:gin] -%> = GWT.create(<%= class_name.pluralize %>RestService.class)<% end -%>;
 <% if options[:cache] -%>
-    private final <%= class_name %>Cache cache;
+    private final <%= class_name %>Cache<% if options[:store] -%>Store<% end -%> cache;
 <% end -%>
 <% if options[:place] -%>
     private final PlaceController places;
@@ -59,7 +63,7 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
     @Inject
 <% end -%>
     public <%= class_name %>Presenter(<%= application_class_name %>ErrorHandler errors, <%= class_name %>View view<% unless options[:singleton] -%>, <%= class_name %>ListView listView<% end -%><% if options[:gin] -%>, <%= class_name.pluralize %>RestService service<% end -%><% if options[:cache] -%>, 
-	   <%= class_name %>Cache cache<% end -%><% if options[:place] -%>, PlaceController places<% end -%>){
+	   <%= class_name %>Cache<% if options[:store] -%>Store<% end -%> cache<% end -%><% if options[:place] -%>, PlaceController places<% end -%>){
         super(errors);
         this.view = view;
         this.view.setPresenter(this);
@@ -103,7 +107,7 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
         });
 <% end -%>
     }
-<% if ! options[:singleton] && ! options[:readonly] -%>
+<% if ! options[:singleton] && ! options[:read_only] -%>
 
     public void create(final <%= class_name %> model){
         service.create(model, new MethodCallback<<%= class_name %>>() {
@@ -128,7 +132,7 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
           });
     }
 <% end -%>
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
 
     public void save(final <%= class_name %> model){
         service.update(model, new MethodCallback<<%= class_name %>>() {
@@ -153,7 +157,7 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
           });
     }
 <% end -%>
-<% if ! options[:singleton] && ! options[:readonly] -%>
+<% if ! options[:singleton] && ! options[:read_only] -%>
 
     public void delete(final <%= class_name %> model){
         service.destroy(model, new MethodCallback<Void>() {
@@ -165,7 +169,11 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
 <% if options[:place] -%>
                 <%= class_name %>Place next = new <%= class_name %>Place(RestfulActionEnum.INDEX);
                 if (places.getWhere().equals(next)) {
+<% if options[:cache] -%>
                     listView.reset(cache.getOrLoadModels());
+<% else -%>
+                    listAll();
+<% end -%>
                 }
                 else {
                     places.goTo(next);
@@ -192,7 +200,20 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
         if (places.getWhere().equals(next)) {
 <% end -%>
         <%= indent -%>setWidget(listView);
+<% if options[:cache] -%>
         <%= indent -%>listView.reset(cache.getOrLoadModels());
+<% else -%>
+        <%= indent -%>service.index(new MethodCallback<List<<%= class_name %>>>() {
+            <%= indent -%>@Override
+            <%= indent -%>public void onSuccess(Method method, List<<%= class_name %>> models) {
+                <%= indent -%>listView.reset(models);
+            <%= indent -%>}
+            <%= indent -%>@Override
+            <%= indent -%>public void onFailure(Method method, Throwable e) {
+                <%= indent -%>onError(method, e);   
+            <%= indent -%>}
+        <%= indent -%>});
+<% end -%>
 <% if options[:place] -%>
         }
         else {
@@ -201,7 +222,7 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
 <% end -%>
     }
 <% end -%>
-<% unless options[:readonly] -%>
+<% if ! options[:read_only] && ! options[:singleton] -%>
 
     public void new<%= class_name %>(){
 <% if options[:place] -%>
@@ -221,7 +242,7 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
 
     public void show(<% unless options[:singleton] -%>int id<% end -%>){
 <% if options[:place] -%>
-        <%= class_name %>Place next = new <%= class_name %>Place(id, RestfulActionEnum.SHOW);
+        <%= class_name %>Place next = new <%= class_name %>Place(<% unless options[:singleton] -%>id, <% end -%>RestfulActionEnum.SHOW);
         if (places.getWhere().equals(next)) {
 <% end -%>
         <%= indent -%>setWidget(view);
@@ -235,7 +256,7 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
             <%= indent -%>}
             <%= indent -%>@Override
             <%= indent -%>public void onFailure(Method method, Throwable e) {
-                <%= indent -%>onError(method, e);   
+		    <%= indent -%>onError(method, e);   
             <%= indent -%>}
           <%= indent -%>});
 <% end -%>
@@ -246,11 +267,11 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
         }
 <% end -%>
     }
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
 
     public void edit(<% unless options[:singleton] -%>int id<% end -%>){
 <% if options[:place] -%>
-        <%= class_name %>Place next = new <%= class_name %>Place(id, RestfulActionEnum.EDIT);
+        <%= class_name %>Place next = new <%= class_name %>Place(<% unless options[:singleton] -%>id, <% end -%>RestfulActionEnum.EDIT);
         if (places.getWhere().equals(next)) {
 <% end -%>
         <%= indent %>setWidget(view);
@@ -277,11 +298,17 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
     }
 <% end -%>
 
+    private void onError(Method method, Throwable e) {
+        errors.onError(method, errors.getType(e));
+    }
+
     private void onError(final <%= class_name %> model, Method method, Throwable e) {
         Type type = errors.getType(e);
-<% if options[:optimistic] -%>
+	<% if options[:optimistic] && !options[:read_only] -%>
         if (type == Type.CONFLICT){
+<% if options[:cache] -%>
             cache.purge(model);
+<% end -%>
             view.reload(model);
         }
 <% end -%>

@@ -43,7 +43,7 @@ public class <%= class_name %>ListViewImpl extends Composite implements <%= clas
 
     private <%= class_name %>Presenter presenter;
 
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
     @UiField Button n_e_w;
 <% end -%>
     @UiField FlexTable list;
@@ -59,7 +59,7 @@ public class <%= class_name %>ListViewImpl extends Composite implements <%= clas
     public void setPresenter(<%= class_name %>Presenter presenter) {
         this.presenter = presenter;
     }
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
 
     @UiHandler("n_e_w")
     void onNewClick(ClickEvent event) {
@@ -71,10 +71,10 @@ public class <%= class_name %>ListViewImpl extends Composite implements <%= clas
         
         @SuppressWarnings("unchecked")
         public void onClick(ClickEvent event) {
-            ModelButton<Car> button = (ModelButton<Car>)event.getSource();
+            ModelButton<<%= class_name %>> button = (ModelButton<<%= class_name %>>)event.getSource();
             switch(button.action){
                 case SHOW: presenter.show(button.model.id); break; 
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
                 case EDIT: presenter.edit(button.model.id); break; 
                 case DESTROY: presenter.delete(button.model); break; 
 <% end -%>
@@ -82,14 +82,14 @@ public class <%= class_name %>ListViewImpl extends Composite implements <%= clas
         }
     };
  
-    private Button newButton(RestfulActionEnum action, Car model){
-        ModelButton<Car> button = new ModelButton<Car>(action, model);
+    private Button newButton(RestfulActionEnum action, <%= class_name %> model){
+        ModelButton<<%= class_name %>> button = new ModelButton<<%= class_name %>>(action, model);
         button.addClickHandler(clickHandler);
         return button;
     }
 
     @Override
-    public void reset(List<Car> models) {
+    public void reset(List<<%= class_name %>> models) {
         list.removeAllRows();
         list.setText(0, 0, "Id");
 <% index = 0 -%>
@@ -102,14 +102,14 @@ public class <%= class_name %>ListViewImpl extends Composite implements <%= clas
         list.getRowFormatter().addStyleName(0, "gwt-rails-model-list-header");
         if (models != null) {
             int row = 1;
-            for(Car model: models){
+            for(<%= class_name %> model: models){
                 setRow(row, model);
                 row++;
             }
         }
     }
 
-    private void setRow(int row, Car model) {
+    private void setRow(int row, <%= class_name %> model) {
         list.setText(row, 0, model.getId() + "");
 <% index = 0 -%>
 <% attributes.each do |attribute| -%>
@@ -123,7 +123,7 @@ public class <%= class_name %>ListViewImpl extends Composite implements <%= clas
 <% end -%>
 
         list.setWidget(row, <%= index + 1 %>, newButton(SHOW, model));
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
         list.setWidget(row, <%= index + 2 %>, newButton(EDIT, model));
         list.setWidget(row, <%= index + 3 %>, newButton(DESTROY, model));
 <% end -%>

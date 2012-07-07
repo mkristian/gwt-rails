@@ -17,3 +17,29 @@
 -singleton +timestamps +optimistic -readonly
 -singleton +timestamps -optimistic +readonly
 -singleton -timestamps -optimistic +readonly
+
+-optimistic -place:
++timestamps +gin +serializer
++timestamps +gin -serializer
++timestamps -gin +serializer
++timestamps -gin -serializer
+-timestamps +gin +serializer
+-timestamps +gin -serializer
+-timestamps -gin +serializer
+-timestamps -gin -serializer
+
++optimistic -place:
++timestamps +gin +serializer
++timestamps +gin -serializer
++timestamps -gin +serializer
++timestamps -gin -serializer
+
+-optimistic +place:
++timestamps +gin +serializer
++timestamps +gin -serializer
+-timestamps +gin +serializer
+-timestamps +gin -serializer
+
++optimistic +place:
++timestamps +gin +serializer
++timestamps +gin -serializer

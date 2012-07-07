@@ -9,23 +9,26 @@ module Gwt
       argument(:attributes,       :type => :array, :default => [], 
                :banner => "field:type field:type field:belongs_to", :desc => 'if no fields are given and there is a model in RAILS_ROOT/app/models then the attrbutes/properties of the model is the source of the fields')
 
-      class_option :timestamps,   :type => :boolean, :default => true
-      class_option :optimistic,   :type => :boolean, :default => false
-      class_option :modified_by,  :type => :string,  :desc => 'class name for the modified_by field. GWT class must implement interface IsUser'
-      class_option :read_only,    :type => :boolean, :default => false
-      class_option :singleton,    :type => :boolean, :default => false
+      class_option :timestamps,   :type => :boolean#, :default => true
+      class_option :optimistic,   :type => :boolean#, :default => false
+#      class_option :modified_by,  :type => :string,  :desc => 'class name for the modified_by field. GWT class must implement interface IsUser'
+      class_option :read_only,    :type => :boolean#, :default => false
+      class_option :singleton,    :type => :boolean#, :default => false
       class_option(:parent,       :type => :string,  
                    :desc => "The parent class for the generated model")
       class_option :model,        :type => :boolean, :default => true
       class_option :rest_service, :type => :boolean, :default => true
-      class_option(:cache,        :type => :boolean, :default => false,
+      class_option(:cache,        :type => :boolean,# :default => false,
                    :desc => 'Uses a cache for loading models. Implies event = true')
-      class_option :event,        :type => :boolean, :default => false
-      class_option :editor,       :type => :boolean, :default => false
-      class_option(:view,         :type => :boolean, :default => false,
-                   :desc => 'Simple view classes for manipulating models. Implies editors = true')
-      class_option :gin,          :type => :boolean, :default => false
-      class_option :place,        :type => :boolean, :default => false
+      class_option(:store,        :type => :boolean,# :default => false,
+                   :desc => 'Uses a localstore for loading models. Implies cache = true')
+      class_option :event,        :type => :boolean#, :default => false
+      class_option :editor,       :type => :boolean#, :default => false
+      class_option(:view,         :type => :boolean,# :default => false,
+                   :desc => 'Simple view classes for manipulating models. Implies editor = true')
+      class_option :gin,          :type => :boolean#, :default => false
+      class_option(:place,        :type => :boolean,# :default => false,
+                   :desc => 'adds GWT place, i.e bookmarkable screens. Implies view = true')
 
       no_tasks do
 
@@ -33,8 +36,8 @@ module Gwt
 
           def parse_attributes! #:nodoc:
             super
-            self.options = self.options.dup
             if self.attributes.empty?
+              self.options = self.options.dup
               options[:timestamps] = false
               options[:modified_by] = false
               model = name.classify.constantize
@@ -47,11 +50,8 @@ module Gwt
               end
               self.options[:singleton] = true if model.respond_to?(:instance)
               self.attributes = attr
+              self.options.freeze
             end
-            self.options[:editor] = true if self.options[:view]
-            self.options[:event] = true if self.options[:cache]
-            self.options[:restservice] = true if self.options[:cache]
-            self.options.freeze
           end
           
         elsif defined? DataMapper
@@ -64,8 +64,8 @@ module Gwt
           
           def parse_attributes! #:nodoc:
             super
-            self.options = self.options.dup
             if self.attributes.empty?
+              self.options = self.options.dup
               model = name.classify.constantize
               attr = []
               model.properties.each do |prop| 
@@ -85,15 +85,18 @@ module Gwt
               end
               self.options[:singleton] = true if model.respond_to?(:instance)
               self.attributes = attr
+              self.options.freeze
             end
-            self.options[:editor] = true if self.options[:view]
-            self.options[:event] = true if self.options[:cache]
-            self.options.freeze
           end
         end
       end
 
       public
+
+      def setup_options
+         super
+      end
+
       def create_model_file
         if options[:model]
           template 'Model.java', File.join(java_root, models_package.gsub(/\./, "/"), class_path, "#{class_name}.java")
@@ -101,13 +104,13 @@ module Gwt
       end
 
       def create_cache_file
-        if options[:cache] && !options[:singleton] && !options[:read_only]
-          template 'Cache.java', File.join(java_root, caches_package.gsub(/\./, "/"), class_path, "#{class_name}Cache.java")
+        if options[:cache] && !options[:singleton]
+          template 'Cache.java', File.join(java_root, caches_package.gsub(/\./, "/"), class_path, "#{class_name}Cache#{ 'Store' if options[:store] }.java")
         end
       end
 
       def create_event_files
-        if options[:event]
+        if options[:event] && !options[:singleton]
           template 'Event.java', File.join(java_root, events_package.gsub(/\./, "/"), class_path, "#{class_name}Event.java")
           template 'EventHandler.java', File.join(java_root, events_package.gsub(/\./, "/"), class_path, "#{class_name}EventHandler.java")
         end
@@ -231,9 +234,26 @@ module Gwt
         end
       end
  
+      def add_to_menu_panel
+        file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "#{application_class_name}Menu.java")
+        if File.exists?(file)
+          content = File.read(file)
+          if content =~ /#{class_name}Place\(/
+            log 'keep', file
+          else
+            # TODO non session case !!!
+            t_name = options[:singleton] ? singular_table_name : table_name
+            content.sub! /super\(\s*sessionManager\s*,\s*placeController\s*\)\s*;/, "super(sessionManager, placeController);\n        addButton(\"#{t_name.underscore.humanize}\", new #{places_package}.#{class_name}Place(#{options[:singleton] ? 'SHOW' : 'INDEX'}));"
+            content.sub! /super\(\s*placeController\s*\)\s*;/, "super(placeController);\n        addButton(\"#{t_name.underscore.humanize}\", new #{places_package}.#{class_name}Place(#{options[:singleton] ? 'SHOW' : 'INDEX'}));"
+            File.open(file, 'w') { |f| f.print content }
+            log "added to", file
+          end
+        end
+      end
+
       def add_to_module
         file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "#{application_class_name}Module.java")
-        if File.exists?(file) && options[:restservice]
+        if File.exists?(file) && (options[:rest_service] || options[:place])
           content = File.read(file)
           if content =~ /#{class_name.pluralize}RestService.class/
             log 'keep', file

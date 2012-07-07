@@ -1,5 +1,6 @@
 require 'rails/generators/resource_helpers'
 require 'generators/base'
+require 'tempfile'
 module Gwt
   module Generators
     class SetupGenerator < Base
@@ -8,23 +9,43 @@ module Gwt
 
       arguments.clear # clear name argument from NamedBase
       
-      argument :gwt_module_name, :type => :string, :required => true
+      argument :gwt_module_name,   :type => :string, :required => true
 
       class_option :place,         :type => :boolean, :default => false
       #class_option :session,      :type => :boolean, :default => false
       class_option :gin,           :type => :boolean, :default => false
       class_option :serializer,    :type => :boolean, :default => false
       class_option :optimistic,    :type => :boolean, :default => false
-      class_option :timestamp,     :type => :boolean, :default => false
+      class_option :timestamps,    :type => :boolean, :default => false
       class_option :menu,          :type => :boolean, :default => false
       #class_option :remote_users, :type => :boolean, :default => false
      
+      def setup_options
+        super
+      end
+
       def name
         gwt_module_name
       end
 
+      def create_gwt_yml_file
+        file = Tempfile.new('gwt')
+        begin
+          opts = self.options.dup
+          opts[:model] = true
+          opts[:rest_service] = true
+          file.write(opts.to_yaml.sub(/---.*\n/, ''))
+          file.close
+          template file.path, File.join('config', 'gwt.yml')
+        ensure
+          file.close
+          file.unlink   # deletes the temp file
+        end
+      end
+
       def create_module_file
-        template 'module.gwt.xml', File.join(java_root, name.gsub(/\./, '/'), "#{application_class_name}.gwt.xml")
+        template 'Module.gwt.xml', File.join(java_root, name.gsub(/\./, '/'), "#{application_class_name}.gwt.xml")
+        template 'ModuleDevelopment.gwt.xml', File.join(java_root, name.gsub(/\./, '/'), "#{application_class_name}Development.gwt.xml")
       end
 
       def create_maven_file
@@ -52,9 +73,11 @@ module Gwt
 
       def create_managed_files
         path = managed_package.gsub(/\./, '/')
-        template('GinModule.java', 
-                 File.join(java_root, path, 
-                           "#{application_class_name}Module.java"))
+        if options[:gin]
+          template('GinModule.java', 
+                   File.join(java_root, path, 
+                             "#{application_class_name}Module.java"))
+        end
         if options[:place]
           template('PlaceHistoryMapper.java', 
                    File.join(java_root, path, 
@@ -64,9 +87,9 @@ module Gwt
                               'ActivityFactory.java'))
         end
         if options[:menu]
-          template('MenuPanel.java', 
+          template('Menu.java', 
                    File.join(java_root, path, 
-                             "#{application_class_name}MenuPanel.java"))
+                             "#{application_class_name}Menu.java"))
         end
       end
 
@@ -75,6 +98,11 @@ module Gwt
         template('Confirmation.java', 
                  File.join(java_root, path, 
                            "#{application_class_name}Confirmation.java"))
+        if options[:view]
+          template('ErrorHandler.java', 
+                   File.join(java_root, path, 
+                             "#{application_class_name}ErrorHandler.java"))
+        end
         if options[:place]
           template('ActivityPlaceActivityMapper.java', 
                    File.join(java_root, path, 
@@ -143,6 +171,29 @@ task :heartbeat => [:environment] do
 end
 # vim: syntax=Ruby
 EOF
+        end
+      end
+
+      def inject_application_config
+        file = File.join('config', 'application.rb')
+        if File.read(file) =~ /config.generators\s+do/
+          say_status :unchanged, file, :blue
+        else
+          inject_into_class(file,
+                            "Application",
+                            <<GENERATORS
+
+    config.generators do |g|
+      g.stylesheet_engine false
+      g.template_engine 'ui'
+      g.assets false
+      g.helper false
+      g.stylesheets false
+      g.scaffold_controller 'gwt'
+    end
+
+GENERATORS
+                            )
         end
       end
 
@@ -223,9 +274,9 @@ SESSION
         end
         if changed
           File.open(file, 'w') { |f| f.print app_controller }
-          log 'changed', file
+          say_status :changed, file
         else
-          log 'unchanged', file
+          say_status :unchanged, file, :blue
         end
       end
 

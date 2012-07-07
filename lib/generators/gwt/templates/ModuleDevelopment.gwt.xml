@@ -1,0 +1,7 @@
+<module rename-to='<%= application_class_name %>'>
+
+  <collapse-all-properties />
+  
+  <inherits name='com.example.<%= application_class_name %>' />
+
+</module>

@@ -39,9 +39,9 @@ public class <%= application_class_name %>Module extends Base<%= options[:place]
 <% if options[:place] -%>
         bind(PlaceHistoryMapper.class).to(<%= application_class_name %>PlaceHistoryMapper.class).in(Singleton.class);
         bind(ActivityMapper.class).to(<% if options[:session] -%>Session<% end -%>ActivityPlaceActivityMapper.class).in(Singleton.class);
-        bind(Delegate.class).to(GwtRailsConfirmation.class).in(Singleton.class);
+        bind(Delegate.class).to(<%= application_class_name %>Confirmation.class);
 <% end -%>
-        bind(GwtRailsConfirmation.class).to(GwtRailsConfirmation.class).in(Singleton.class);
+        bind(<%= application_class_name %>Confirmation.class);
 <% if options[:session] -%>
         bind(LoginView.class).to(LoginViewImpl.class);
 <% end -%>

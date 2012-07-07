@@ -14,7 +14,7 @@ public interface <%= class_name %>View extends IsWidget {
     void setPresenter(<%= class_name %>Presenter presenter);
 
     void show(<%= class_name %> model);
-<% unless options[:readonly] -%>
+<% unless options[:read_only] -%>
 <% if options[:optimistic] -%>
 
     void reload(<%= class_name %> model);
@@ -22,7 +22,7 @@ public interface <%= class_name %>View extends IsWidget {
 
     void edit(<%= class_name %> model);
 <% end -%>
-<% if ! options[:singleton] && ! options[:readonly] -%>
+<% if ! options[:singleton] && ! options[:read_only] -%>
 
     void new<%= class_name %>();
 <% end -%>

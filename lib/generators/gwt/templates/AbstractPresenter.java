@@ -7,10 +7,10 @@ import <%= base_package %>.<%= application_class_name %>ErrorHandler;
 
 public class AbstractPresenter {
 
-    protected final GwtRailsErrorHandler errors;
+    protected final <%= application_class_name %>ErrorHandler errors;
     private AcceptsOneWidget display;
 
-    public AbstractPresenter(GwtRailsErrorHandler errors){
+    public AbstractPresenter(<%= application_class_name %>ErrorHandler errors){
         this.errors = errors;
     }
 

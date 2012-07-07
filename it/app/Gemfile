@@ -1,0 +1,15 @@
+source 'https://rubygems.org'
+
+gem 'rails', '3.2.6'
+
+gem 'sqlite3', :platforms => :ruby
+
+platforms :jruby do
+   gem 'activerecord-jdbc-adapter'
+   gem 'jdbc-sqlite3', :require => false
+end
+
+gem 'json'
+
+gem 'gwt-rails', :path => '../../../'
+gem 'ruby-maven' # needed due to limitation of ruby-maven

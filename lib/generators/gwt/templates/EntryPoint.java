@@ -1,11 +1,15 @@
 package <%= base_package %>;
+<% if options[:gin] -%>
 
 import <%= managed_package %>.<%= application_class_name %>Module;
+<% end -%>
 
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
+<% if options[:gin] -%>
 import com.google.gwt.inject.client.GinModules;
 import com.google.gwt.inject.client.Ginjector;
+<% end -%>
 <% if options[:place] -%>
 import com.google.gwt.place.shared.PlaceHistoryHandler;
 <% end -%>
@@ -19,6 +23,7 @@ import org.fusesource.restygwt.client.Defaults;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class <%= application_class_name %>EntryPoint implements EntryPoint {
+<% if options[:gin] -%>
 
     @GinModules(<%= application_class_name %>Module.class)
     static public interface <%= application_class_name %>Ginjector extends Ginjector {
@@ -27,6 +32,7 @@ public class <%= application_class_name %>EntryPoint implements EntryPoint {
 <% end -%>
         Application getApplication();
     }
+<% end -%>
 
     /**
      * This is the entry point method.
@@ -35,6 +41,7 @@ public class <%= application_class_name %>EntryPoint implements EntryPoint {
         Defaults.setServiceRoot(GWT.getModuleBaseURL().replaceFirst("[a-zA-Z0-9_]+/$", ""));
         Defaults.setDispatcher(DefaultDispatcherSingleton.INSTANCE);
         GWT.log("base url for restservices: " + Defaults.getServiceRoot());
+<% if options[:gin] -%>
 
         final <%= application_class_name %>Ginjector injector = GWT.create(<%= application_class_name %>Ginjector.class);
 
@@ -44,6 +51,9 @@ public class <%= application_class_name %>EntryPoint implements EntryPoint {
     
         // Goes to the place represented on URL else default place
         injector.getPlaceHistoryHandler().handleCurrentHistory();
+<% end -%>
+<% else -%>
+        new <%= application_class_name %>Application().run();
 <% end -%>
     }
 }

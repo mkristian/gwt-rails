@@ -1,23 +1,23 @@
 #!/usr/bin/env ruby
-if ARGV[0] =~ /^g/
-  file = File.join('config', 'gwt.yml')
-  if File.exists?(file)
-    require 'yaml'
-    c = YAML.load_file(file)
-    opts = c[ARGV[1]] || []
-    opts = opts.split(/\s+/)
-    opts.each do |opt|
-      if opt =~ /^--/
-        unless ARGV.member?(opt)
-          ARGV << opt
-        end
-      end
-    end
-  end
-  load 'script/rails'
-elsif ARGV[0] =~ /^n/
-  load 'script/rails'
-else
+# if ARGV[0] =~ /^g/
+#   file = File.join('config', 'gwt.yml')
+#   if File.exists?(file)
+#     require 'yaml'
+#     c = YAML.load_file(file)
+#     opts = c[ARGV[1]] || []
+#     opts = opts.split(/\s+/)
+#     opts.each do |opt|
+#       if opt =~ /^--/
+#         unless ARGV.member?(opt)
+#           ARGV << opt
+#         end
+#       end
+#     end
+#   end
+#   load 'script/rails'
+# elsif ARGV[0] =~ /^n/
+#   load 'script/rails'
+# else
 require 'thor'
 require 'ruby_maven'
 

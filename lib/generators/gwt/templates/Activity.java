@@ -25,9 +25,7 @@ import <%= gwt_rails_package %>.places.RestfulActionEnum;
 
 public class <%= class_name %>Activity extends AbstractActivity {
 
-<% if !options[:singleton] -%>
     private final <%= class_name %>Place place;
-<% end -%>
     private final <%= class_name %>Presenter presenter;
 <% attributes.select { |a| a.type == :belongs_to }.each do |attribute| -%>
     private final <%= attribute.name.classify.to_s.pluralize %>Cache <%= attribute.name.pluralize %>Cache;
@@ -36,9 +34,7 @@ public class <%= class_name %>Activity extends AbstractActivity {
     @Inject
     public <%= class_name %>Activity(@Assisted <%= class_name %>Place place, <%= class_name %>Presenter presenter<% if attribute.type == :belongs_to -%>
 , <%= attribute.name.classify.to_s.pluralize %>Cache <%= attribute.name.pluralize %>Cache<% end -%>) {
-<% unless options[:singleton] -%>
         this.place = place;
-<% end -%>
         this.presenter = presenter;
 <% attributes.select { |a| a.type == :belongs_to }.each do |attribute| -%>
         this.<%= attribute.name.pluralize %>Cache = <%= attribute.name.pluralize %>Cache;
@@ -62,17 +58,17 @@ public class <%= class_name %>Activity extends AbstractActivity {
     }
 
     public void start(AcceptsOneWidget display, EventBus eventBus) {
-        presenter.init(display, eventBus);
+        presenter.init(display<% if options[:cache] -%>, eventBus<% end -%>);
         switch(RestfulActionEnum.valueOf(place.action)){
 <% unless options[:read_only] -%>
             case EDIT:
-                presenter.edit(place.id);
+                presenter.edit(<% unless options[:singleton] -%>place.id<% end -%>);
                 break;
 <% end -%>
             case SHOW:
-                presenter.show(place.id);
+                presenter.show(<% unless options[:singleton] -%>place.id<% end -%>);
                 break;
-<% unless options[:read_only] -%>
+<% if ! options[:read_only] && ! options[:singleton] -%>
             case NEW:
                 presenter.new<%= class_name %>();
                 break;
@@ -82,8 +78,8 @@ public class <%= class_name %>Activity extends AbstractActivity {
             default:
                 presenter.listAll();
                 break;
-        }
 <% end -%>
+        }
     }
 
     @Override
