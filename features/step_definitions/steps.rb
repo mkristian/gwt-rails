@@ -16,7 +16,7 @@ def rmvn
               # full maven log
               #rmvn.options['-X'] = nil
               # jruby related debug log
-              #rmvn.options['-Djruby.verbose'] = true
+              rmvn.options['-Djruby.verbose'] = true
               gems = File.expand_path(File.join('target', 'rubygems'))
               rmvn.options['-Dgem.home'] = ENV['GEM_HOME'] || gems
               rmvn.options['-Dgem.path'] = ENV['GEM_PATH'] || gems
@@ -31,6 +31,11 @@ def copy_to(name)
   @target = File.join(base, name)
   FileUtils.rm_rf(@target)
   FileUtils.mkdir_p(base)
+  FileUtils.cp_r(path, @target)
+end
+
+def copy_mavenfile
+  path = File.join('it', 'app', 'Mavenfile')
   FileUtils.cp_r(path, @target)
 end
 
@@ -63,6 +68,13 @@ Given /^application and setup GWT with "([^\"]*)"$/ do |args|
   exec_line(line)
 end
 
+Given /^application setup with "([^\"]*)"$/ do |args|
+  name = args.gsub(/--/, '').gsub(/-/,'_').gsub(/ /, '_')
+  copy_to(name)
+  line = "rails generate gwt:setup com.example #{args} --template-engine=false --force"
+  exec_line(line)
+end
+
 When /^scaffold a resource "([^\"]*)"$/ do |name|
   scaffold(name)
 end
@@ -79,17 +91,17 @@ Then /^gwt compile succeeds$/ do
   exec('compile', 'gwt:compile')#, '-Dgwt.compiler.strict')
 end
 
-# Then /^jetty runs$/ do
-#   rmvn.options['-l'] = 'output.log'
-#   #rmvn.options['-o'] = nil
-#   #rmvn.options['-X'] = nil
-#   #rmvn.options['-Djruby.verbose'] = true
-#   rmvn.options['-Dgem.home'] = ENV['GEM_HOME'] if ENV['GEM_HOME']
-#   rmvn.options['-Dgem.path'] = ENV['GEM_PATH'] if ENV['GEM_PATH']
+Then /^"([^\"]*)" succeeds\.$/ do |args|
+  path = File.join('it', 'app', 'Mavenfile')
+  FileUtils.cp_r(path, @target)
 
-#   succeeded = rmvn.exec_in(@target, '-Prun,integration,assets')
-#   unless succeeded
-#     puts File.read(File.join(@target, 'output.log'))
-#     raise 'failure' 
-#   end
-# end
+  webxml = File.join(@target, 'public', 'WEB-INF', 'web.xml')
+  content = File.read(webxml)
+  content.sub!(/.\/target\/rubygems/, rmvn.options['-Dgem.path'])
+  File.open(webxml, 'w') { |f| f.puts content }
+
+  ENV['RAKE_TASK'] = args.sub(/rake\s+/, '')
+  ENV['TEST_PORT'] = '8080'
+  exec('verify', '-Dmaven.test.skip')#, '-Dgwt.compiler.strict')
+  puts "\t#{args}"
+end

@@ -3,10 +3,11 @@ class <%= controller_class_name %>Controller < ApplicationController
   private
 
   def cleanup
-    super params[:<%= singular_table_name %>]
+    super(params[:<%= singular_table_name %>])
   end
 
   public
+<% unless options[:singleton] -%>
 
   # GET <%= route_url %>
   def index
@@ -14,13 +15,19 @@ class <%= controller_class_name %>Controller < ApplicationController
 
     respond_with @<%= plural_table_name %>
   end
+<% end -%>
 
-  # GET <%= route_url %>/1
+  # GET <%= route_url %><% unless options[:singleton] -%>/1<% end %>
   def show
+<% if options[:singleton] -%>
+    @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= class_name %>.instance<% if options[:serializer] -%>)<% end -%>
+<% else -%>
     @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= orm_class.find(class_name, "params[:id]") %><% if options[:serializer] -%>)<% end -%>
+<% end -%>
 
     respond_with @<%= singular_table_name %>
   end
+<% if !options[:singleton] && !options[:read_only] -%>
 
   # POST <%= route_url %>
   def create
@@ -33,13 +40,23 @@ class <%= controller_class_name %>Controller < ApplicationController
 
     respond_with @<%= singular_table_name %>
   end
+<% end -%>
+<% unless options[:read_only] -%>
 
   # PUT <%= route_url %>/1
   def update
 <% if options[:optimistic] && options[:timestamps] -%>
-    @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= orm_class.find(class_name, "params[:updated_at], params[:id]").sub(/\.(get|find)/, '.optimistic_\1') %><% if options[:serializer] -%>)<% end -%>
+<%   if options[:singleton] -%>
+    @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= orm_class.find(class_name, "updated_at, #{class_name}.instance.id").sub(/\.(get|find)/, '.optimistic_\1') %><% if options[:serializer] -%>)<% end -%>
+<%   else -%>
+    @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= orm_class.find(class_name, "updated_at, params[:id]").sub(/\.(get|find)/, '.optimistic_\1') %><% if options[:serializer] -%>)<% end -%>
+<%   end -%>
 <% else -%>
+<%   if options[:singleton] -%>
+    @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= class_name %>.instance<% if options[:serializer] -%>)<% end -%>
+<%   else -%>
     @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= orm_class.find(class_name, "params[:id]") %><% if options[:serializer] -%>)<% end -%>
+<%   end -%>
 <% end -%>
 
     @<%= singular_table_name %>.attributes = params[:<%= singular_table_name %>]
@@ -51,11 +68,13 @@ class <%= controller_class_name %>Controller < ApplicationController
 
     respond_with @<%= singular_table_name %>
   end
+<% end -%>
+<% if !options[:singleton] && !options[:read_only] -%>
 
   # DELETE <%= route_url %>/1
   def destroy
 <% if options[:optimistic] && options[:timestamps] -%>
-    @<%= singular_table_name %> = <%= orm_class.find(class_name, "params[:updated_at], params[:id]").sub(/\.(get|find)/, '.optimistic_\1') %>
+    @<%= singular_table_name %> = <%= orm_class.find(class_name, "updated_at, params[:id]").sub(/\.(get|find)/, '.optimistic_\1') %>
 <% else -%>
     @<%= singular_table_name %> = <%= orm_class.find(class_name, "params[:id]") %>
 <% end -%>
@@ -64,4 +83,5 @@ class <%= controller_class_name %>Controller < ApplicationController
 
     respond_with @<%= singular_table_name %>
   end
+<% end -%>
 end

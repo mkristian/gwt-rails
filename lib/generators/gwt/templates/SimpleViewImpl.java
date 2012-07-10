@@ -38,7 +38,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
   private final <%= application_class_name %>Confirmation confirmation;  
 
   private <%= class_name %>Presenter presenter;
-<% if options[:cache] && options[:timestamps] || options[:optimistic] -%>
+<% if options[:optimistic] -%>
   private boolean editable = false;
 <% end -%>
   private boolean dirty = false;
@@ -81,7 +81,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   @Override
   public void show(<%= class_name %> model){
-<% if options[:cache] && options[:timestamps] || options[:optimistic] -%>
+<% if options[:optimistic] -%>
       editable = false;
 <% end -%>
 <% unless options[:read_only] -%>
@@ -122,7 +122,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   @Override
   public void edit(<%= class_name %> model){
-<% if options[:cache] && options[:timestamps] || options[:optimistic] -%>
+<% if options[:optimistic] -%>
       editable = true;
 <% end -%>
 <% unless options[:singleton] -%>
@@ -143,7 +143,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 
   @Override
   public void new<%= class_name %>(){
-<% if options[:cache] && options[:timestamps] || options[:optimistic] -%>
+<% if options[:optimistic] -%>
       editable = true;
 <% end -%>
 <% unless options[:singleton] -%>
@@ -239,7 +239,7 @@ public class <%= class_name %>ViewImpl extends Composite implements <%= class_na
 <% end -%>
 
   private void initDirty(){
-      dirty = <% if options[:cache] && options[:timestamps] || options[:optimistic] -%>editable && <% end -%>(editorDriver == null ? false : editorDriver.isDirty());
+      dirty = <% if options[:optimistic] -%>editable && <% end -%>(editorDriver == null ? false : editorDriver.isDirty());
   }
 
   @Override

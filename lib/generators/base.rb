@@ -1,5 +1,6 @@
 require 'rails/generators/named_base'
 require 'yaml'
+require 'generators/setup_options'
 module Gwt
   module Generators
     class Base < ::Rails::Generators::NamedBase
@@ -7,40 +8,9 @@ module Gwt
       protected
 
       no_tasks do
-        
-        # def parse_attributes! #:nodoc:
-        #   super
-        #   setup_options
-        # end
 
-        def setup_options
-          self.options = self.options.dup
-          say_status :using, "#{self.options.inspect}", :white
-          file = File.join('config', 'gwt.yml')
-          if File.exists?(file)
-            c = YAML.load_file(file)
-            if c
-              c.each do |k,v|
-                self.options[k] = v if self.options[k].nil?
-              end
-            end
-          end
-          if (self.options[:cache] || self.options[:store]) && self.options[:singleton]
-            say :warning, "singleton can not have store or cache (yet)"
-          end
-          self.options[:timestamps]   = true if self.options[:optimistic]
-          self.options[:cache]        = true if self.options[:store]
-          self.options[:cache]        = false if self.options[:singleton]
-          self.options[:store]        = false if self.options[:singleton]
-          self.options[:place]        = true if self.options[:menu]
-          self.options[:view]         = true if self.options[:place]
-          self.options[:editor]       = true if self.options[:view]
-          self.options[:gin]          = true if self.options[:place]
-          self.options[:event]        = true if self.options[:cache]
-          self.options[:rest_service] = true if self.options[:cache]
-          say_status :using, "#{self.options.inspect}", :white
-          self.options.freeze
-        end
+        include SetupOptions
+
       end
 
       def application_class_name

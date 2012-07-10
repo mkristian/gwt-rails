@@ -5,9 +5,13 @@ class <%= class_name %>Serializer < Ixtlan::Babel::Serializer
   model <%= class_name %>
 
   add_context(:single,
-              :root => '<%= singular_table_name %>'
-<% if options[:modified_by] -%>,
-              :except => [:modified_by_id]
+              :root => '<%= singular_table_name %>'<% 
+except = []
+except << :id if options[:singleton]
+except << :modified_by_id if options[:modified_by]
+-%>
+<% unless except.empty? -%>,
+              :except => <%= except.inspect %>
 <% end -%>
 <% if options[:modified_by] || attributes.select {|attr| attr.reference? }.size > 0 -%>,
               :include => {

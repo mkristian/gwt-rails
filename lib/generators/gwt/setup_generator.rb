@@ -32,6 +32,8 @@ module Gwt
         file = Tempfile.new('gwt')
         begin
           opts = self.options.dup
+          opts[:timestamps] = true if opts[:timestamps].nil?
+          opts[:migration] = true if opts[:migration].nil?
           opts[:model] = true
           opts[:rest_service] = true
           file.write(opts.to_yaml.sub(/---.*\n/, ''))
@@ -153,9 +155,9 @@ module Gwt
         template 'gitignore', File.join('public', 'WEB-INF', '.gitignore')
       end
 
-#      def add_gems
-#        gem 'ixtlan-core'
-#      end
+      def create_monkey_patch_responder
+        template 'monkey_patch_responder.rb', File.join('config', 'initializers', 'monkey_patch_responder.rb')
+      end
 
       def add_raketask
         if options[:remote_user]
@@ -190,6 +192,7 @@ EOF
       g.helper false
       g.stylesheets false
       g.scaffold_controller 'gwt'
+      g.resource_route 'gwt'
     end
 
 GENERATORS
@@ -204,6 +207,7 @@ GENERATORS
         unless app_controller =~ /respond_to\s+:json/
           changed = true
           app_controller.sub! /ActionController::Base$/, <<SESSION
+ActionController::Base
 
   respond_to :json
 
@@ -213,6 +217,7 @@ GENERATORS
 SESSION
         end
         if options[:optimistic]
+          gem 'ixtlan-optimistic'
           unless app_controller =~ /head\s+:conflict/
             changed = true
             app_controller.sub! /rescue_from/, 'rescue_from Ixtlan::Optimistic::ObjectStaleException do
@@ -222,20 +227,26 @@ SESSION
   rescue_from'
           end
         end  
-        if options[:serializer]
+        if options[:serializer]||true
+          gem 'ixtlan-babel'
           unless app_controller =~ /def\s+cleanup/
             changed = true
             app_controller.sub! /^end\s*$/, <<SESSION
+
   protected
 
   before_filter :cleanup
+
+  def updated_at(key = params[:controller])
+    @_updated_at ||= (params[key] || {})[:updated_at]
+  end
 
   def cleanup(model)
     # compensate the shortcoming of the incoming json/xml
     model ||= []
     model.delete :id
-    model.delete :created_at
-    params[:updated_at] ||= model.delete :updated_at
+    model.delete :created_at 
+    @_updated_at ||= model.delete :updated_at
   end
 end
 SESSION

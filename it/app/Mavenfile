@@ -1,0 +1,20 @@
+#-*- mode: ruby -*-
+
+packaging :pom # use pom packaging to avoid building war file on test run
+
+self.properties.merge!({ "jetty.version" => '7.6.4.v20120524' })
+
+#gem 'bundler', '1.1.4'
+
+# latest version
+jar 'org.jruby.rack:jruby-rack', '1.1.7'
+
+plugin(:rake, '${jruby.plugins.version}').in_phase('integration-test').execute_goal(:rake).with 'rakeArgs' => "#{ENV['RAKE_TASK']}"
+
+plugin('org.mortbay.jetty:jetty-maven-plugin', '${jetty.version}') do |j|
+  j.with(:stopKey => :foo, :stopPort => 9999, :webXml=> "${basedir}/public/WEB-INF/web.xml")
+  j.in_phase('pre-integration-test').execute_goal(:run).with(:daemon => true)
+  j.in_phase('post-integration-test').execute_goal(:stop)
+end
+
+# vim: syntax=Ruby

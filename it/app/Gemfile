@@ -13,3 +13,6 @@ gem 'json'
 
 gem 'gwt-rails', :path => '../../../'
 gem 'ruby-maven' # needed due to limitation of ruby-maven
+gem 'minitest', '3.2.0'
+gem 'rest-client', '1.6.3'
+gem 'jruby-openssl', '0.7.7', :platforms => :jruby

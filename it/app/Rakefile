@@ -1,0 +1,33 @@
+#!/usr/bin/env rake
+# Add your own tasks in files placed in lib/tasks ending in .rake,
+# for example lib/tasks/capistrano.rake, and they will automatically be available to Rake.
+
+require File.expand_path('../config/application', __FILE__)
+
+App::Application.load_tasks
+
+require 'rake/testtask'
+
+Rake::TestTask.new('conflict') do |t|
+  t.libs.push "lib"
+  t.test_files = FileList['specs/conflict_spec.rb']
+  t.verbose = true
+end
+
+Rake::TestTask.new('timestamps') do |t|
+  t.libs.push "lib"
+  t.test_files = FileList['specs/timestamps_spec.rb']
+  t.verbose = true
+end
+
+Rake::TestTask.new('ids') do |t|
+  t.libs.push "lib"
+  t.test_files = FileList['specs/ids_spec.rb']
+  t.verbose = true
+end
+
+Rake::TestTask.new('serialize') do |t|
+  t.libs.push "lib"
+  t.test_files = FileList['specs/serialize_spec.rb']
+  t.verbose = true
+end

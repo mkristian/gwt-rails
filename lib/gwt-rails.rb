@@ -1,3 +1,4 @@
+require 'generators/setup_options'
 module Gwt
   module Model
     
@@ -11,6 +12,21 @@ module Gwt
         class_option :serializer,  :type => :boolean, :default => false
         class_option :optimistic,  :type => :boolean, :default => false
         class_option :modified_by, :type => :string,  :desc => 'class name for the modified_by field. GWT class must implement interface IsUser'
+
+        alias :options_old :options
+
+        no_tasks do
+
+          include Gwt::Generators::SetupOptions
+
+          def options
+            # replace options with defaults from yml file
+            @__options ||= 
+              begin
+                setup_options(options_old)
+              end
+          end
+        end
 
         def create_serializer_files
           if options[:serializer]
@@ -28,7 +44,8 @@ class Railtie < Rails::Railtie
   gmethod = config.respond_to?(:generators)? :generators : :app_generators
   config.after_initialize do |app|
     # monkey patch generator only when used
-    if ARGV[0] == 'scaffold' || ARGV[0] == 'model' 
+    if ARGV[0] == 'scaffold' || ARGV[0] == 'model'
+      # load lazy to avoid strange effects
       require 'rails/generators/active_record/model/model_generator'
 
       ActiveRecord::Generators::ModelGenerator.send :include,  Gwt::Model
