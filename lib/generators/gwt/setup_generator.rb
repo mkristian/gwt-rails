@@ -28,6 +28,15 @@ module Gwt
         gwt_module_name
       end
 
+      def maybe_warn
+        if options[:optimistic] && !options[:serializer]
+          say_status :warn, "the optimistic find/get needs a more precise datatime/time then the default json formater/parser produces. please configure it to use at least milliseconds (javascript is limited to milliseconds). see ixtlan-babel gem for a working format.", :red
+        end
+        if options[:singleton] && !options[:serializer]
+          say_status :warn, "singleton have an id in the database but the GWT model does not. i.e. you need to filter the id on json serialization.", :red
+        end
+      end
+
       def create_gwt_yml_file
         file = Tempfile.new('gwt')
         begin
@@ -71,6 +80,10 @@ module Gwt
                  File.join(java_root, 
                            base_package.gsub(/\./, '/'), 
                            "#{application_class_name}Application.java"))
+        template("GwtApplication.ui.xml", 
+                 File.join(java_root, 
+                           base_package.gsub(/\./, '/'), 
+                           "#{application_class_name}Application.ui.xml"))
       end
 
       def create_managed_files
@@ -360,9 +373,16 @@ ROUTE
       end
       
       def base_package
-        name + '.client'
+        @base_package ||= name + '.client'
       end
-
+      
+      def say_something
+        say ''
+        say ''
+        say 'the file "config/gwt.yml" contains default options for the gwt generators. feel free to change them as needed.'
+        say ''
+        say ''
+      end
     end
   end
 end

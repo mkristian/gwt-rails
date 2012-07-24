@@ -2,6 +2,6 @@
 
   <collapse-all-properties />
   
-  <inherits name='com.example.<%= application_class_name %>' />
+  <inherits name='<%= base_package.sub /.client/, '' %>.<%= application_class_name %>' />
 
 </module>

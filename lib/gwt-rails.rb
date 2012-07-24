@@ -45,10 +45,15 @@ class Railtie < Rails::Railtie
   config.after_initialize do |app|
     # monkey patch generator only when used
     if ARGV[0] == 'scaffold' || ARGV[0] == 'model'
-      # load lazy to avoid strange effects
-      require 'rails/generators/active_record/model/model_generator'
 
-      ActiveRecord::Generators::ModelGenerator.send :include,  Gwt::Model
+      begin
+        # load lazy to avoid strange effects
+        require 'rails/generators/active_record/model/model_generator'
+        
+        ActiveRecord::Generators::ModelGenerator.send :include,  Gwt::Model
+      rescue LoadError
+        warn "TODO try datamapper instead"
+      end
     end
   end
 end

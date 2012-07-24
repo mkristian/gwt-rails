@@ -1,10 +1,12 @@
 class <%= controller_class_name %>Controller < ApplicationController
+<% unless options[:read_only] -%>
 
   private
 
   def cleanup
     super(params[:<%= singular_table_name %>])
   end
+<% end -%>
 
   public
 <% unless options[:singleton] -%>
@@ -47,7 +49,7 @@ class <%= controller_class_name %>Controller < ApplicationController
   def update
 <% if options[:optimistic] && options[:timestamps] -%>
 <%   if options[:singleton] -%>
-    @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= orm_class.find(class_name, "updated_at, #{class_name}.instance.id").sub(/\.(get|find)/, '.optimistic_\1') %><% if options[:serializer] -%>)<% end -%>
+    @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= orm_class.find(class_name, "updated_at, #{class_name}.instance.id").sub(/\.(get|get\!|find)/, '.optimistic_\1') %><% if options[:serializer] -%>)<% end -%>
 <%   else -%>
     @<%= singular_table_name %> = <% if options[:serializer] -%>serializer(<% end -%><%= orm_class.find(class_name, "updated_at, params[:id]").sub(/\.(get|find)/, '.optimistic_\1') %><% if options[:serializer] -%>)<% end -%>
 <%   end -%>

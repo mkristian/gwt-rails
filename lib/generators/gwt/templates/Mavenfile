@@ -1,6 +1,6 @@
 #-*- mode: ruby -*-
 GWT_VERSION = '2.4.0' unless defined? GWT_VERSION
-jar('de.mkristian.gwt:rails-gwt', '0.7.1-SNAPSHOT').scope :provided
+jar('de.mkristian.gwt:rails-gwt', '0.8.0-SNAPSHOT').scope :provided
 jar('org.fusesource.restygwt:restygwt', '1.3-SNAPSHOT').scope :provided
 jar('javax.ws.rs:jsr311-api', '1.1').scope :provided
 jar('com.google.gwt:gwt-user', GWT_VERSION).scope :provided
@@ -33,7 +33,7 @@ profile("mac") do |mac|
 end
 
 # to get the restygwt and rails-gwt snapshots
-#repository("snapshots") do |snapshot|
+#repository("snapshots") do |snapshots|
 #  snapshots.url "http://http://mojo.saumya.de/"
 #  snapshots.releases(:enabled => false)
 #  snapshots.snapshots(:enabled => true)
@@ -45,7 +45,7 @@ jar 'org.jruby.rack:jruby-rack', '1.1.7'
 profile :development do |p|
   p.activation.by_default
   p.plugin('org.codehaus.mojo:gwt-maven-plugin', GWT_VERSION) do |gwt|
-    gwt.with({ :module => 'com.example.<%= application_class_name %>Development',
+    gwt.with({ :module => '<%= base_package.sub /.client/, '' %>.<%= application_class_name %>Development',
                :style => "DETAILED",
                :includes => "**/<%= application_class_name %>GWTTestSuite.java",
                :draftCompile => true })
@@ -54,7 +54,7 @@ end
 
 profile :production do |p|
   p.plugin('org.codehaus.mojo:gwt-maven-plugin', GWT_VERSION) do |gwt|
-    gwt.with({ :module => 'com.example.<%= application_class_name %>s',
+    gwt.with({ :module => '<%= base_package.sub /.client/, '' %>.<%= application_class_name %>',
                :style => "OBF",
                :draftCompile => false,
                :disableClassMetadata => true,

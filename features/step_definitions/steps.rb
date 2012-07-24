@@ -64,7 +64,7 @@ end
 Given /^application and setup GWT with "([^\"]*)"$/ do |args|
   name = args.gsub(/--/, '').gsub(/-/,'_').gsub(/ /, '_')
   copy_to(name)
-  line = "rails generate gwt:setup com.example #{args}"
+  line = "rails generate gwt:setup com.example #{args} --force"
   exec_line(line)
 end
 

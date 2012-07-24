@@ -23,6 +23,17 @@ module Gwt
       class_option :modified_by, :type => :string
       class_option :timestamps,  :type => :boolean, :default => true
 
+      def patch_datamapper_active_model
+        if @orm_class.nil? && defined? DataMapper
+          require 'generators/data_mapper'
+          DataMapper::Generators::ActiveModel.class_eval do
+            def self.find(klass, params=nil)
+              "#{klass}.get!(#{params})"
+            end
+          end
+        end
+      end
+
       def create_controller_files
         setup_options
         template 'controller.rb', File.join('app/controllers', class_path, "#{controller_file_name}_controller.rb")

@@ -20,6 +20,7 @@ Gem::Specification.new do |s|
   s.files += Dir['MIT-LICENSE'] + Dir['*.md']
   s.test_files += Dir['spec/**/*_spec.rb']
   s.add_runtime_dependency 'ruby-maven', '3.0.4.0.29.0'
+  #s.add_development_dependency 'thor', '~> 0.15.4'
   s.add_development_dependency 'rake', '0.9.2.2'
   s.add_development_dependency 'cucumber', '~> 1.1.9'
 end

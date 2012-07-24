@@ -1,23 +1,20 @@
 #!/usr/bin/env ruby
-# if ARGV[0] =~ /^g/
-#   file = File.join('config', 'gwt.yml')
-#   if File.exists?(file)
-#     require 'yaml'
-#     c = YAML.load_file(file)
-#     opts = c[ARGV[1]] || []
-#     opts = opts.split(/\s+/)
-#     opts.each do |opt|
-#       if opt =~ /^--/
-#         unless ARGV.member?(opt)
-#           ARGV << opt
-#         end
-#       end
-#     end
-#   end
-#   load 'script/rails'
-# elsif ARGV[0] =~ /^n/
-#   load 'script/rails'
-# else
+if ARGV[0] =~ /^n/
+  unless ARGV.detect { |a| a == '--skip-bundle' || a == '--skip-gemfile' }
+    ENV['GWT_APP_GEN_BUNDLE_INSTALL'] = 'true' 
+  end
+  template = File.expand_path('../../lib/gwt/rails/templates.rb', __FILE__)
+  ARGV << '--skip-javascrpt'
+  ARGV << '--skip-sprockets'
+  ARGV << '--skip-bundle'
+  ARGV << '-m'
+  ARGV << template
+
+  require 'rubygems'
+#  version = ">= 0"
+ # gem 'railties', version
+  load Gem.bin_path('railties', 'rails')
+else
 require 'thor'
 require 'ruby_maven'
 
@@ -31,23 +28,20 @@ class GWTCommand < Thor
       ARGV.clear # clean up in case another script gets executed
       mvn.exec(args)
     end
+
+    def clean_args(args, name)
+      if i = args.index("--#{name}")
+        unless args.delete_at(i).is_a? TrueClass
+          args.delete_at(i)
+        end
+      end
+    end
+
   end
 
-  desc "new APP_PATH GWT_PACKAGE_NAME [rails-options] [-- maven-options]", "create a new rails application with GWT UI given the path of the application and its package for the new GWT module"
-  method_option :session, :type => :boolean, :default => false, :desc => 'adds session support'
-  method_option :menu, :type => :boolean, :default => false, :desc => 'adds menu support'
-  def new(app_path, gwt_package, *args)
-    args = ARGV.dup
-    args.delete('new')
-    args.delete(app_path)
-    args.delete(gwt_package)
-    args.delete_if {|a| a =~ /^--session|^--menu/ }
-    if i = args.index("--")
-      maven_args = args[i..-1]
-      args = i == 0 ? [] : args[0..(i-1)]
-    end
-    margs = ["rails3:new", "-Dargs=\"#{[app_path, args].flatten!.join ' '}\"", "-Dgwt.package=#{gwt_package}", "-Dgwt.session=#{options['session'] || false}", "-Dgwt.menu=#{options['menu'] || false}", maven_args || []].flatten!
-    exec(margs)
+  desc 'new', "this is just a wrapper to call 'rails new' without javascript and sprockets"
+  def new
+    # dummy to create the above help message
   end
 
   def help(*args)
@@ -56,17 +50,53 @@ class GWTCommand < Thor
   end
 
   desc "run [maven_options]", "starts the GWT development shell"
+  method_option :log_level, :type => :string, :desc => 'log level: INFO, DEBUG. default: INFO'
+  method_option :jruby_version, :type => :string, :desc => 'jruby version to run jetty'
+  method_option :jruby_rack_version, :type => :string, :desc => 'jruby-rack version used to setup rails within jetty'
   def server(*args)
     args = ARGV.dup
     args.delete('server')
+    clean_args(args, :jruby_version)
+    clean_args(args, :jruby_rack_version)
+    clean_args(args, :log_level)
+    if version = args.delete(:jruby_version)
+      args << "-Djruby.version=#{version}"
+    end
+    if version = args.delete(:jruby_rack_version)
+      args << "-Djruby.rack.version=#{version}"
+    end
+    if level = args.delete(:log_level)
+      args << "-Dgwt.logLevel=#{level}"
+    end
 
     exec ["gwt:run", args].flatten!
   end
 
   desc "compile [maven_options]", "compiles the gwt java code to javascript"
+  #method_option :draft, :type => :boolean, :desc => 'draft compile. default: true (development), false (production)'
+  method_option :env, :type => :string, :desc => 'development or production'
+  method_option :strict, :type => :boolean, :desc => 'strict compile. default: false'
+  method_option :style, :type => :string, :desc => 'javascript style: DETAILED, PRETTY, OBF, OBFUSCATED. default: DETAILED (development), OBF (production)'
+  method_option :log_level, :type => :string, :desc => 'log level: INFO, DEBUG. default: INFO'
   def compile(*args)
     args = ARGV.dup
     args.delete('compile')
+    clean_args(args, :strict)
+    clean_args(args, :style)
+    clean_args(args, :log_level)
+    clean_args(args, :env)
+    if value = options[:strict]
+      args << "-Dgwt.compile.strict=#{value}"
+    end
+    if value = options[:style]
+      args << "-Dgwt.style=#{value}"
+    end
+    if value = options[:log_level]
+      args << "-Dgwt.logLevel=#{value}"
+    end
+    if value = options[:env]
+      args << "-P#{value}"
+    end
 
     exec ["compile", "gwt:compile", args].flatten!
   end

@@ -3,7 +3,7 @@
 "http://java.sun.com/dtd/web-app_2_3.dtd">
 <web-app>
   <welcome-file-list>
-    <welcome-file>/<%= application_name %>/<%= application_name %>.html</welcome-file>
+    <welcome-file>/<%= application_class_name %>.html</welcome-file>
   </welcome-file-list>
 
   <context-param>
@@ -20,7 +20,7 @@
   </context-param>
   <context-param>
     <param-name>gem.path</param-name>
-    <param-value>./target/rubygems</param-value>
+    <param-value>./target/rubygems:./target/rubygems-bundler-maven-plugin</param-value>
   </context-param>
   <context-param>
     <param-name>rails.env</param-name>
