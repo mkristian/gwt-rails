@@ -1,18 +1,35 @@
-gem 'gwt-rails'
+apply ENV['GWT_APP_GEN_TEMPLATE'] if ENV['GWT_APP_GEN_TEMPLATE']
 
-unless defined? JRUBY_VERSION
-  apply 'http://jruby.org/templates/default.rb'
+if ENV['GWT_APP_GEN_TEMPLATE'] =~ /datamapper/
+  unless defined? JRUBY_VERSION
+    apply 'http://jruby.org/templates/default.rb'
 
-  unless options[:sprockets]
-    gsub_file "Gemfile", /^# the javascript engine for execjs gem
+    unless options[:sprockets]
+      gsub_file "Gemfile", /^# the javascript engine for execjs gem
 platforms :jruby do
   group :assets do
     gem 'therubyrhino'
   end
 end
 /, ''
+    end
   end
+  gsub_file File.join('config', 'application.rb'), /^require .active_record\/railtie.\s*\n/, ''
 end
+
+unless options[:sprockets]
+  gsub_file "Gemfile", /^# Gems used only for assets and not required
+# in production environments by default.
+group :assets do
+  gem 'sass-rails',   '~> .\..\..'
+  gem 'coffee-rails', '~> .\..\..'
+  gem 'uglifier',     '~> .\..\..'
+end
+/, ''
+  gsub_file "Gemfile", /^gem 'jquery-rails', .*\n/, ''
+end
+
+gem 'gwt-rails'
 
 if ENV['GWT_APP_GEN_BUNDLE_INSTALL'] == 'true'
   command = 'install'

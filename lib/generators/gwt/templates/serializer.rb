@@ -9,11 +9,10 @@ class <%= class_name %>Serializer < Ixtlan::Babel::Serializer
 except = []
 except << :id if options[:singleton]
 except << :modified_by_id if options[:modified_by]
--%>
-<% unless except.empty? -%>,
-              :except => <%= except.inspect %>
-<% end -%>
-<% if options[:modified_by] || attributes.select {|attr| attr.reference? }.size > 0 -%>,
+-%><% if except.empty? -%>
+
+<% else -%>,
+              :except => <%= except.inspect %><% end -%><% if options[:modified_by] || attributes.select {|attr| attr.reference? }.size > 0 -%>,
               :include => {
 <% if options[:modified_by] -%>
                 :modified_by => {
@@ -38,7 +37,7 @@ except << :modified_by_id if options[:modified_by]
   add_context(:collection,
               :root => '<%= singular_table_name %>',
               :except => <%= except.inspect %>
-              )
+             )
 <% end -%>
 
   default_context_key :single

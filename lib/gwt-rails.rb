@@ -5,11 +5,14 @@ module Gwt
     def self.included(base)
       base.class_eval do
 
-        source_root File.expand_path(File.join('generators', 'templates'), 
-                                     File.dirname(__FILE__))
+        def self.source_root          
+          File.expand_path(File.join('generators', 
+                                     'templates',
+                                     defined?(DataMapper) ? 'datamapper' : 'activerecord'), 
+                           File.dirname(__FILE__))
+        end
 
         class_option :singleton,   :type => :boolean, :default => false
-        class_option :serializer,  :type => :boolean, :default => false
         class_option :optimistic,  :type => :boolean, :default => false
         class_option :modified_by, :type => :string,  :desc => 'class name for the modified_by field. GWT class must implement interface IsUser'
 
@@ -25,12 +28,6 @@ module Gwt
               begin
                 setup_options(options_old)
               end
-          end
-        end
-
-        def create_serializer_files
-          if options[:serializer]
-            template 'serializer.rb', File.join('app', 'serializers', "#{singular_table_name}_serializer.rb")
           end
         end
 
@@ -52,7 +49,13 @@ class Railtie < Rails::Railtie
         
         ActiveRecord::Generators::ModelGenerator.send :include,  Gwt::Model
       rescue LoadError
-        warn "TODO try datamapper instead"
+        begin
+          # load lazy to avoid strange effects
+          require 'generators/data_mapper/model/model_generator'
+          DataMapper::Generators::ModelGenerator.send :include,  Gwt::Model
+        rescue LoadError
+          warn "not datamapper and not activerecord"
+        end
       end
     end
   end

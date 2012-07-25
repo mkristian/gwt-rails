@@ -45,7 +45,9 @@ module Gwt
           opts[:migration] = true if opts[:migration].nil?
           opts[:model] = true
           opts[:rest_service] = true
-          file.write(opts.to_yaml.sub(/---.*\n/, ''))
+          opts.keys.sort.each do |k|
+            file.puts "#{k}: #{opts[k]}" unless k == :setup_session
+          end
           file.close
           template file.path, File.join('config', 'gwt.yml')
         ensure
@@ -157,7 +159,7 @@ module Gwt
       end
 
       def create_html
-        template 'page.html', File.join('public', "#{application_name}.html")
+        template 'page.html', File.join('public', "#{application_class_name}.html")
         template('gwt.css', 
                  File.join('public', 'stylesheets', "#{application_name}.css"))
         template 'htaccess', File.join('public', application_class_name, '.htaccess')
@@ -376,6 +378,8 @@ ROUTE
         @base_package ||= name + '.client'
       end
       
+      hook_for :setup_session, :in => :gwt
+
       def say_something
         say ''
         say ''

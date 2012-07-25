@@ -12,10 +12,12 @@ class <%= class_name %> < <%= parent_class_name.classify %>
   <%= attribute.type %> :<%= attribute.name.singularize %>
 <% end -%>
 <% if options[:modified_by] -%>
+
   belongs_to :modified_by, :class_name => "<%= options[:modified_by] -%>"
   validates :modified_by_id, :presence => true
 <% end -%>
 <% if options[:singleton] -%>
+
   def self.instance
     self.first || self.new
   end

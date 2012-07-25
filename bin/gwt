@@ -3,6 +3,11 @@ if ARGV[0] =~ /^n/
   unless ARGV.detect { |a| a == '--skip-bundle' || a == '--skip-gemfile' }
     ENV['GWT_APP_GEN_BUNDLE_INSTALL'] = 'true' 
   end
+  i = ARGV.index("-m") || ARGV.index("--template")
+  if i
+    ARGV.delete_at(i)
+    ENV['GWT_APP_GEN_TEMPLATE'] = ARGV.delete_at(i)
+  end
   template = File.expand_path('../../lib/gwt/rails/templates.rb', __FILE__)
   ARGV << '--skip-javascrpt'
   ARGV << '--skip-sprockets'
@@ -39,7 +44,8 @@ class GWTCommand < Thor
 
   end
 
-  desc 'new', "this is just a wrapper to call 'rails new' without javascript and sprockets"
+  desc 'new', "this is just a wrapper to call 'rails new' without javascript and sprockets. if you run this command with MRI then the Gemfile will get a jruby section so the gwt developement shell can use JRuby. see 'rails new' for details on options."
+  method_option :template, :aliases => '-m', :type => :string, :desc => 'applies template, i.e. http://datamapper.org/templates/rails.rb if you want to datamapper as ORM'
   def new
     # dummy to create the above help message
   end
