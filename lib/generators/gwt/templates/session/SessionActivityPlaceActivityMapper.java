@@ -3,7 +3,6 @@ package <%= base_package %>;
 import javax.inject.Inject;
 
 import <%= managed_package %>.ActivityFactory;
-import <%= models_package %>.User;
 import <%= places_package %>.LoginPlace;
 
 import com.google.gwt.activity.shared.Activity;
@@ -11,18 +10,18 @@ import com.google.gwt.place.shared.Place;
 
 import <%= gwt_rails_package %>.Notice;
 import <%= gwt_rails_package %>.places.RestfulPlace;
+import <%= gwt_rails_package %>.session.Guard;
 import <%= gwt_rails_package %>.session.NeedsAuthorization;
 import <%= gwt_rails_package %>.session.NoAuthorization;
-import <%= gwt_rails_package %>.session.SessionManager;
 
 public class SessionActivityPlaceActivityMapper extends ActivityPlaceActivityMapper {
 
-    private final SessionManager<User> manager;
+    private final Guard guard;
 
     @Inject
-    public SessionActivityPlaceActivityMapper(ActivityFactory factory, SessionManager<User> manager, Notice notice) {
+    public SessionActivityPlaceActivityMapper(ActivityFactory factory, Guard guard, Notice notice) {
         super(factory, notice);
-        this.manager = manager;
+        this.guard = guard;
     }
 
     public Activity getActivity(Place place) {
@@ -35,13 +34,13 @@ public class SessionActivityPlaceActivityMapper extends ActivityPlaceActivityMap
      */
     protected Activity pessimisticGetActivity(Place place) {
         if (!(place instanceof NoAuthorization)) {
-            if(manager.hasSession()){
-                if(!manager.isAllowed((RestfulPlace<?,?>)place)){
+            if(guard.hasSession()){
+                if(!guard.isAllowed((RestfulPlace<?,?>)place)){
                     notice.warn("nothing to see");
                     return null;
                 }
                 //TODO move into a dispatch filter or callback filter
-                manager.resetCountDown();
+                guard.resetCountDown();
             }
             else {
                 return LoginPlace.LOGIN.create(factory);
@@ -56,8 +55,8 @@ public class SessionActivityPlaceActivityMapper extends ActivityPlaceActivityMap
      */
     protected Activity optimisticGetActivity(Place place) {
         if (place instanceof NeedsAuthorization) {
-            if(manager.hasSession()){
-                if(!manager.isAllowed((RestfulPlace<?,?>)place)){
+            if(guard.hasSession()){
+                if(!guard.isAllowed((RestfulPlace<?,?>)place)){
                     notice.warn("nothing to see");
                     return null;
                 }

@@ -11,7 +11,7 @@ module Gwt
 
       class_option :timestamps,   :type => :boolean#, :default => true
       class_option :optimistic,   :type => :boolean#, :default => false
-#      class_option :modified_by,  :type => :string,  :desc => 'class name for the modified_by field. GWT class must implement interface IsUser'
+      class_option :modified_by,  :type => :string,  :desc => 'class name for the modified_by field. GWT class must implement interface IsUser'
       class_option :read_only,    :type => :boolean#, :default => false
       class_option :singleton,    :type => :boolean#, :default => false
       class_option(:parent,       :type => :string,  
@@ -29,6 +29,8 @@ module Gwt
       class_option :gin,          :type => :boolean#, :default => false
       class_option(:place,        :type => :boolean,# :default => false,
                    :desc => 'adds GWT place, i.e bookmarkable screens. Implies view = true')
+      class_option(:menu,        :type => :boolean,# :default => false,
+                   :desc => 'adds an entry to the menu. Implies place = true')
 
       no_tasks do
 
@@ -68,9 +70,9 @@ module Gwt
               self.options = self.options.dup
               model = name.classify.constantize
               attr = []
+              options[:timestamps] = (model.properties[:created_at] && model.properties[:updated_at]) != nil
               model.properties.each do |prop| 
-                options[:timestamps] = true if [:created_at, :updated_at].member?(prop.name)
-                if prop.name.to_s != 'id' && (prop.name.to_s =~ /_id$/).nil? && ! [:created_at, :updated_at].member?(prop.name)
+                if prop.name.to_s != 'id' && (prop.name.to_s =~ /_id$/).nil? && ! (options[:timestamps] && [:created_at, :updated_at].member?(prop.name))
                   attr << ::Rails::Generators::GeneratedAttribute.parse("#{prop.name}:#{DM_MAP[prop.class]}")
                 end
               end
@@ -131,33 +133,33 @@ module Gwt
 
       def create_view_files
         if options[:view]
-          template('SimpleView.java', 
+          template('View.java', 
                    File.join(java_root, 
                              views_package.gsub(/\./, "/"), 
                              class_path, 
                              "#{class_name}View.java"))
-          template('SimpleViewImpl.java', 
+          template('ViewImpl.java', 
                    File.join(java_root, 
                              views_package.gsub(/\./, "/"), 
                              class_path, 
                              "#{class_name}ViewImpl.java"))
-          template('SimpleView.ui.xml', 
+          template('View.ui.xml', 
                    File.join(java_root, 
                              views_package.gsub(/\./, "/"), 
                              class_path, 
                              "#{class_name}View.ui.xml"))
           unless options[:singleton]
-            template('SimpleListView.java', 
+            template('ListView.java', 
                      File.join(java_root, 
                                views_package.gsub(/\./, "/"), 
                                class_path,
                                "#{class_name}ListView.java"))
-            template('SimpleListViewImpl.java', 
+            template('ListViewImpl.java', 
                      File.join(java_root, 
                                views_package.gsub(/\./, "/"), 
                                class_path, 
                                "#{class_name}ListViewImpl.java"))
-            template('SimpleListView.ui.xml', 
+            template('ListView.ui.xml', 
                      File.join(java_root, 
                                views_package.gsub(/\./, "/"), 
                                class_path, 
@@ -206,11 +208,11 @@ module Gwt
           if File.exists?(factory_file)
             factory = File.read(factory_file)
             if factory =~ /@Named\(.#{table_name}.\)/
-              log 'keep', factory_file
+              say_status 'unchanged', factory_file, :blue
             else
               factory.sub! /interface\s+ActivityFactory\s+\{/, "interface ActivityFactory {\n    @Named(\"#{table_name}\") Activity create(#{places_package}.#{class_name}Place place);"
               File.open(factory_file, 'w') { |f| f.print factory }
-              log "added to", factory_file
+              log "changed", factory_file
             end
           end
         end
@@ -222,41 +224,48 @@ module Gwt
           if File.exists?(file)
             content = File.read(file)
             if content =~ /#{class_name}PlaceTokenizer/
-              log 'keep', file
+              say_status 'unchanged', file, :blue
             else
-              content.sub! /public\s+#{application_class_name}PlaceHistoryMapper.(.*).\s*\{/ do |m|
-                "public #{application_class_name}PlaceHistoryMapper(#{$1}){\n        register(\"#{table_name}\", new #{places_package}.#{class_name}PlaceTokenizer());"
+              if content =~ /super\(\s*session\s*\);/
+                content.sub! /super\(\s*session\s*\);/ do |m|
+                  "super(session);\n        register(\"#{table_name}\", new #{places_package}.#{class_name}PlaceTokenizer());"
+                end
+              else
+                content.sub! /public\s+#{application_class_name}PlaceHistoryMapper.(.*).\s*\{/ do |m|
+                  "public #{application_class_name}PlaceHistoryMapper(#{$1}){\n        register(\"#{table_name}\", new #{places_package}.#{class_name}PlaceTokenizer());"
+                end
               end
               File.open(file, 'w') { |f| f.print content }
-              log "added to", file
+              log "changed", file
             end
           end
         end
       end
  
       def add_to_menu_panel
-        file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "#{application_class_name}Menu.java")
-        if File.exists?(file)
-          content = File.read(file)
-          if content =~ /#{class_name}Place\(/
-            log 'keep', file
-          else
-            # TODO non session case !!!
-            t_name = options[:singleton] ? singular_table_name : table_name
-            content.sub! /super\(\s*sessionManager\s*,\s*placeController\s*\)\s*;/, "super(sessionManager, placeController);\n        addButton(\"#{t_name.underscore.humanize}\", new #{places_package}.#{class_name}Place(#{options[:singleton] ? 'SHOW' : 'INDEX'}));"
-            content.sub! /super\(\s*placeController\s*\)\s*;/, "super(placeController);\n        addButton(\"#{t_name.underscore.humanize}\", new #{places_package}.#{class_name}Place(#{options[:singleton] ? 'SHOW' : 'INDEX'}));"
-            File.open(file, 'w') { |f| f.print content }
-            log "added to", file
+        if options[:menu]
+          file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "#{application_class_name}Menu.java")
+          if File.exists?(file)
+            content = File.read(file)
+            if content =~ /#{class_name}Place\(/
+              say_status 'unchanged', file, :blue
+            else
+              t_name = options[:singleton] ? singular_table_name : table_name
+              content.sub! /super\(\s*placeController\s*\,\s*guard\)\s*;/, "super(placeController, guard);\n        addButton(\"#{t_name.underscore.humanize}\", new #{places_package}.#{class_name}Place(#{options[:singleton] ? 'SHOW' : 'INDEX'}));"
+              content.sub! /super\(\s*placeController\s*\)\s*;/, "super(placeController);\n        addButton(\"#{t_name.underscore.humanize}\", new #{places_package}.#{class_name}Place(#{options[:singleton] ? 'SHOW' : 'INDEX'}));"
+              File.open(file, 'w') { |f| f.print content }
+              log "changed", file
+            end
           end
         end
       end
 
       def add_to_module
-        file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "#{application_class_name}Module.java")
+        file = File.join(java_root, managed_package.gsub(/\./, "/"), class_path, "ManagedGinModule.java")
         if File.exists?(file) && (options[:rest_service] || options[:place])
           content = File.read(file)
           if content =~ /#{class_name.pluralize}RestService.class/
-            log 'keep', file
+            say_status 'unchanged', file, :blue
           else content =~ /super.configure\(\);/
             content.sub! /super.configure\(\);/, "super.configure();\n        bind(#{restservices_package}.#{class_name.pluralize}RestService.class).toProvider(#{class_name.pluralize}RestServiceProvider.class);"
 
@@ -274,7 +283,7 @@ module Gwt
 }
 EOF
             File.open(file, 'w') { |f| f.print content }
-            log "added to", file
+            log "changed", file
           end
         end
       end

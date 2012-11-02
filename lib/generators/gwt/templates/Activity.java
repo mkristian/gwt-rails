@@ -75,12 +75,14 @@ public class <%= class_name %>Activity extends AbstractActivity {
 <% end -%>
 <% unless options[:singleton] -%>
             case INDEX:
-            default:
                 presenter.listAll();
                 break;
+            default:
+                presenter.unknownAction(place.action);
 <% end -%>
         }
     }
+<% unless options[:read_only] -%>
 
     @Override
     public String mayStop() {
@@ -91,4 +93,5 @@ public class <%= class_name %>Activity extends AbstractActivity {
             return null;
         }
     }
+<% end -%>
 }

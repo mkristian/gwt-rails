@@ -1,51 +1,73 @@
-package <%= activities_package %>;
+package <%= presenters_package %>;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
+import <%= base_package %>.<%= application_class_name %>Application;
 import <%= models_package %>.User;
-import <%= places_package %>.LoginPlace;
 import <%= restservices_package %>.SessionRestService;
 
 import org.fusesource.restygwt.client.Method;
 import org.fusesource.restygwt.client.MethodCallback;
 
-import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.event.shared.EventBus;
-import com.google.gwt.user.client.ui.AcceptsOneWidget;
-import com.google.inject.assistedinject.Assisted;
 
 import <%= gwt_rails_package %>.Notice;
 import <%= gwt_rails_session_package %>.Authentication;
 import <%= gwt_rails_session_package %>.LoginView;
 import <%= gwt_rails_session_package %>.Session;
+import <%= gwt_rails_session_package %>.SessionHandler;
 import <%= gwt_rails_session_package %>.SessionManager;
 
-public class LoginActivity extends AbstractActivity implements LoginView.Presenter{
+@Singleton
+public class LoginPresenter implements LoginView.Presenter{
 
     private final SessionRestService service;
-    private final LoginView view;
     private final SessionManager<User> sessionManager;
     private final Notice notice;
 
     @Inject
-    public LoginActivity(@Assisted LoginPlace place,
-            LoginView view,
-            SessionRestService service,
-            SessionManager<User> sessionManager,
-            Notice notice) {
-        this.view = view;
+    public LoginPresenter(final SessionRestService service,
+            final SessionManager<User> sessionManager,
+            final Notice notice) {
         this.service = service;
         this.sessionManager = sessionManager;
         this.notice = notice;
     }
 
-    public void start(AcceptsOneWidget display, EventBus eventBus) {
-        display.setWidget(view.asWidget());
-        view.setPresenter(this);
+    public void init(final <%= application_class_name %>Application app){
+        sessionManager.addSessionHandler(new SessionHandler<User>() {
+            
+            @Override
+            public void timeout() {
+                notice.info("timeout");
+                logout();
+            }
+                
+            @Override
+            public void logout() {
+                app.stopSession();
+                service.destroy(new MethodCallback<Void>() {
+                    public void onSuccess(Method method, Void response) {
+                    }
+                    public void onFailure(Method method, Throwable exception) {
+                    }
+                });
+            }
+                
+            @Override
+            public void login(User user) {
+                app.startSession(user);
+            }
+            
+            @Override
+            public void accessDenied() {
+                notice.error("access denied");
+            }
+        });        
     }
 
-    public void login(final String login, String password) {
+    public void login(final String login, final String password) {
         Authentication authentication = new Authentication(login, password);
         service.create(authentication, new MethodCallback<Session<User>>() {
 

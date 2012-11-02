@@ -23,6 +23,7 @@ import java.util.List;
 
 <% if options[:gin] -%>
 import javax.inject.Inject;
+import javax.inject.Singleton;
 <% else -%>
 import com.google.gwt.core.client.GWT;
 <% end -%>
@@ -37,14 +38,17 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
 import org.fusesource.restygwt.client.Method;
 import org.fusesource.restygwt.client.MethodCallback;
 
-import <%= gwt_rails_package %>.ErrorHandler.Type;
 <% if options[:cache] -%>
 import <%= gwt_rails_package %>.events.ModelEvent;
 <% end -%>
 <% if options[:place] -%>
+import <%= gwt_rails_package %>.places.RestfulAction;
 import <%= gwt_rails_package %>.places.RestfulActionEnum;
 <% end -%>
 
+<% if options[:gin] -%>
+@Singleton
+<% end -%>
 public class <%= class_name %>Presenter extends AbstractPresenter {
 
     private final <%= class_name %>View view;
@@ -256,7 +260,7 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
             <%= indent -%>}
             <%= indent -%>@Override
             <%= indent -%>public void onFailure(Method method, Throwable e) {
-		    <%= indent -%>onError(method, e);   
+                <%= indent -%>onError(method, e);   
             <%= indent -%>}
           <%= indent -%>});
 <% end -%>
@@ -298,10 +302,14 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
     }
 <% end -%>
 
-    private void onError(Method method, Throwable e) {
-        errors.onError(method, errors.getType(e));
+    public void unknownAction(RestfulAction action){
+        errors.show("unknown action: " + action);
     }
 
+    private void onError(Method method, Throwable e) {
+        errors.onError(method, e);
+    }
+<% unless options[:read_only] -%>
     private void onError(final <%= class_name %> model, Method method, Throwable e) {
         Type type = errors.getType(e);
 	<% if options[:optimistic] && !options[:read_only] -%>
@@ -319,5 +327,6 @@ public class <%= class_name %>Presenter extends AbstractPresenter {
     public boolean isDirty() {
         return view.isDirty();
     }
+<% end -%>
 <% end -%>
 }

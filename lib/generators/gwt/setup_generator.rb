@@ -12,13 +12,11 @@ module Gwt
       argument :gwt_module_name,   :type => :string, :required => true
 
       class_option :place,         :type => :boolean, :default => false
-      #class_option :session,      :type => :boolean, :default => false
       class_option :gin,           :type => :boolean, :default => false
       class_option :serializer,    :type => :boolean, :default => false
       class_option :optimistic,    :type => :boolean, :default => false
       class_option :timestamps,    :type => :boolean, :default => false
       class_option :menu,          :type => :boolean, :default => false
-      #class_option :remote_users, :type => :boolean, :default => false
      
       def setup_options
         super
@@ -45,8 +43,9 @@ module Gwt
           opts[:migration] = true if opts[:migration].nil?
           opts[:model] = true
           opts[:rest_service] = true
+          opts[:managed_files] = false
           opts.keys.sort.each do |k|
-            file.puts "#{k}: #{opts[k]}" unless k == :setup_session
+            file.puts "#{k}: #{opts[k]}" unless k =~ /session/
           end
           file.close
           template file.path, File.join('config', 'gwt.yml')
@@ -64,11 +63,15 @@ module Gwt
       def create_maven_file
         template 'Mavenfile', 'Mavenfile'
         if File.exists?('.gitignore')
-          unless File.read('.gitignore') =~ /^target/
+          gitignore = File.read('.gitignore')
+          unless gitignore =~ /^target/
             File.open('.gitignore', 'a') { |f| f.puts 'target/' }
           end
-          unless File.read('.gitignore') =~ /^\*pom/
-            File.open('.gitignore', 'a') { |f| f.puts '*pom' }
+          unless gitignore =~ /^\*pom/
+            File.open('.gitignore', 'a') { |f| f.puts '.pom.xml' }
+          end
+          unless gitignore =~ /^gwt-unitCache/
+            File.open('.gitignore', 'a') { |f| f.puts 'gwt-unitCache/' }
           end
         end
       end
@@ -78,36 +81,10 @@ module Gwt
                  File.join(java_root, 
                            base_package.gsub(/\./, '/'), 
                            "#{application_class_name}EntryPoint.java"))
-        template("SimpleGwtApplication.java", 
-                 File.join(java_root, 
-                           base_package.gsub(/\./, '/'), 
-                           "#{application_class_name}Application.java"))
         template("GwtApplication.ui.xml", 
                  File.join(java_root, 
                            base_package.gsub(/\./, '/'), 
                            "#{application_class_name}Application.ui.xml"))
-      end
-
-      def create_managed_files
-        path = managed_package.gsub(/\./, '/')
-        if options[:gin]
-          template('GinModule.java', 
-                   File.join(java_root, path, 
-                             "#{application_class_name}Module.java"))
-        end
-        if options[:place]
-          template('PlaceHistoryMapper.java', 
-                   File.join(java_root, path, 
-                             "#{application_class_name}PlaceHistoryMapper.java"))
-          template('ActivityFactory.java', 
-                    File.join(java_root, path, 
-                              'ActivityFactory.java'))
-        end
-        if options[:menu]
-          template('Menu.java', 
-                   File.join(java_root, path, 
-                             "#{application_class_name}Menu.java"))
-        end
       end
 
       def create_scaffolded_files
@@ -125,37 +102,6 @@ module Gwt
                    File.join(java_root, path, 
                              'ActivityPlaceActivityMapper.java'))
         end
-        if options[:session]
-          template 'SessionActivityPlaceActivityMapper.java', 
-                        File.join(java_root, path, 
-                                  'SessionActivityPlaceActivityMapper.java')
-          template 'BreadCrumbsPanel.java', 
-                        File.join(java_root, path, 
-                                  'BreadCrumbsPanel.java')          
-        end
-      end
-
-      def create_session_files
-        if options[:session]
-          template 'LoginActivity.java',
-                        File.join(java_root, activities_package.gsub(/\./, '/'),
-                                  'LoginActivity.java')
-          template 'User.java',
-                        File.join(java_root, models_package.gsub(/\./, '/'),
-                                  'User.java')
-          template 'LoginPlace.java',
-                        File.join(java_root, places_package.gsub(/\./, '/'),
-                                  'LoginPlace.java')
-          template 'SessionRestService.java',
-                        File.join(java_root, restservices_package.gsub(/\./, '/'),
-                                  'SessionRestService.java')
-          template 'LoginViewImpl.java',
-                        File.join(java_root, views_package.gsub(/\./, '/'),
-                                  'LoginViewImpl.java')
-          template 'LoginView.ui.xml',
-                        File.join(java_root, views_package.gsub(/\./, '/'),
-                                  'LoginView.ui.xml')
-        end
       end
 
       def create_html
@@ -172,23 +118,6 @@ module Gwt
 
       def create_monkey_patch_responder
         template 'monkey_patch_responder.rb', File.join('config', 'initializers', 'monkey_patch_responder.rb')
-      end
-
-      def add_raketask
-        if options[:remote_user]
-          prepend_file 'Rakefile', '#-*- mode: ruby -*-\n'
-          append_file 'Rakefile', <<-EOF
-
-desc 'triggers the heartbeat request (user updates)'
-task :heartbeat => [:environment] do
-    heartbeat = Heartbeat.new
-    heartbeat.beat
-
-    puts "\#{DateTime.now.strftime('%Y-%m-%d %H:%M:%S')} - \#{heartbeat}"
-end
-# vim: syntax=Ruby
-EOF
-        end
       end
 
       def inject_application_config
@@ -221,12 +150,13 @@ GENERATORS
         changed = false
         unless app_controller =~ /respond_to\s+:json/
           changed = true
+          not_found = defined?(DataMapper) ? "DataMapper::ObjectNotFoundError" : "ActiveRecord::RecordNotFound"
           app_controller.sub! /ActionController::Base$/, <<SESSION
 ActionController::Base
 
   respond_to :json
 
-  rescue_from ActiveRecord::RecordNotFound do
+  rescue_from #{not_found} do
     head :not_found
   end
 SESSION
@@ -305,80 +235,12 @@ SESSION
           say_status :unchanged, file, :blue
         end
       end
-
-      def create_rails_session_files
-        if options[:session]
-          template 'sessions_controller.rb', File.join('app', 'controllers', 'sessions_controller.rb')
-          file = File.join('config', 'environments', 'development.rb')
-          development = File.read(file)
-          changed = false
-          unless development =~ /config.remote_service_url/
-            changed = true
-            development.sub! /^end\s*$/, <<ENV
-
-  if ENV['SSO'] == 'true' || ENV['SSO'] == ''
-    config.remote_service_url = 'http://localhost:3000'
-    config.remote_token = 'be happy'
-  end
-end
-ENV
-          end
-          if changed
-            File.open(file, 'w') { |f| f.print development }
-            log 'changed', file
-          else
-            log 'unchanged', file
-          end
-          file = File.join('app', 'controllers', 'application_controller.rb')
-          app_controller = File.read(file)
-          changed = false
-          unless app_controller =~ /def\s+current_user/
-            changed = true
-            app_controller.sub! /^end\s*$/, <<SESSION
-
-  protected
-
-  def current_user(user = nil)
-    session['user'] = user if user
-    session['user']
-  end
-end
-SESSION
-          end
-          template 'authentication.rb', File.join('app', 'models', 'authentication.rb')
-          template 'group.rb', File.join('app', 'models', 'group.rb')          
-          template 'session.rb', File.join('app', 'models', 'session.rb')
-          template 'user.rb', File.join('app', 'models', 'user.rb')
-          if options[:remote_users]
-            template 'remote_user.rb', File.join('app', 'models', 'remote_user.rb')
-            template 'application.rb', File.join('app', 'models', 'application.rb')
-            template 'ApplicationLinksPanel.java', File.join(java_root, base_package.gsub(/\./, '/'), 'ApplicationLinksPanel.java')
-            template 'Application.java', File.join(java_root, models_package.gsub(/\./, '/'), 'Application.java')
-            template 'create_users.rb', File.join('db', 'migrate', '0_create_users.rb')
-            template 'heartbeat.rb', File.join('lib', 'heartbeat.rb')
-          end
-          FileUtils.mv(File.join('db', 'seeds.rb'), File.join('db', 'seeds-old.rb'))
-          template 'seeds.rb', File.join('db', 'seeds.rb')
-          route <<ROUTE
-resource :session do
-    member do
-      post :reset_password
-    end
-  end
-ROUTE
-          gem 'ixtlan-core'
-          gem 'ixtlan-session-timeout'
-          gem 'ixtlan-guard'
-          # needs to be in Gemfile to have jruby find the gem
-          gem 'jruby-openssl', '~> 0.7.4', :platforms => :jruby
-        end
-      end
-      
+  
       def base_package
         @base_package ||= name + '.client'
       end
       
-      hook_for :setup_session, :in => :gwt
+      hook_for :setup_session, :in => :gwt, :default => :session
 
       def say_something
         say ''

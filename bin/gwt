@@ -16,100 +16,100 @@ if ARGV[0] =~ /^n/
   ARGV << template
 
   require 'rubygems'
-#  version = ">= 0"
- # gem 'railties', version
+  #  version = ">= 0"
+  # gem 'railties', version
   load Gem.bin_path('railties', 'rails')
 else
-require 'thor'
-require 'ruby_maven'
+  require 'thor'
+  require 'ruby_maven'
 
-class GWTCommand < Thor
-  no_tasks do
-    def mvn
-      @mvn ||= Maven::RubyMaven.new
-    end
-    
-    def exec(*args)
-      ARGV.clear # clean up in case another script gets executed
-      mvn.exec(args)
-    end
+  class GWTCommand < Thor
+    no_tasks do
+      def mvn
+        @mvn ||= Maven::RubyMaven.new
+      end
+      
+      def exec(*args)
+        ARGV.clear # clean up in case another script gets executed
+        mvn.exec(args)
+      end
 
-    def clean_args(args, name)
-      if i = args.index("--#{name}")
-        unless args.delete_at(i).is_a? TrueClass
-          args.delete_at(i)
+      def clean_args(args, name)
+        if i = args.index("--#{name}")
+          unless args.delete_at(i).is_a? TrueClass
+            args.delete_at(i)
+          end
         end
       end
+
     end
 
+    desc 'new', "this is just a wrapper to call 'rails new' without javascript and sprockets. if you run this command with MRI then the Gemfile will get a jruby section so the gwt developement shell can use JRuby. see 'rails new' for details on options."
+    method_option :template, :aliases => '-m', :type => :string, :desc => 'applies template, i.e. http://datamapper.org/templates/rails.rb if you want to datamapper as ORM'
+    def new
+      # dummy to create the above help message
+    end
+
+    def help(*args)
+      super
+      #    exec ["rails3:new", "-Dargs=--help"] if File.exists?('Gemfile')
+    end
+
+    desc "run [maven_options]", "starts the GWT development shell"
+    method_option :log_level, :type => :string, :desc => 'log level: INFO, DEBUG. default: INFO'
+    method_option :jruby_version, :type => :string, :desc => 'jruby version to run jetty'
+    method_option :jruby_rack_version, :type => :string, :desc => 'jruby-rack version used to setup rails within jetty'
+    def server(*args)
+      args = ARGV.dup
+      args.delete('server')
+      clean_args(args, :jruby_version)
+      clean_args(args, :jruby_rack_version)
+      clean_args(args, :log_level)
+      if version = args.delete(:jruby_version)
+        args << "-Djruby.version=#{version}"
+      end
+      if version = args.delete(:jruby_rack_version)
+        args << "-Djruby.rack.version=#{version}"
+      end
+      if level = args.delete(:log_level)
+        args << "-Dgwt.logLevel=#{level}"
+      end
+
+      exec ["gwt:run", args].flatten!
+    end
+
+    desc "compiles", "compiles the gwt java code to javascript"
+    #method_option :draft, :type => :boolean, :desc => 'draft compile. default: true (development), false (production)'
+    method_option :env, :type => :string, :desc => 'development or production'
+    method_option :strict, :type => :boolean, :desc => 'strict compile. default: false'
+    method_option :style, :type => :string, :desc => 'javascript style: DETAILED, PRETTY, OBF, OBFUSCATED. default: DETAILED (development), OBF (production)'
+    method_option :log_level, :type => :string, :desc => 'log level: INFO, DEBUG. default: INFO'
+    def compile(*args)
+      args = ARGV.dup
+      args.delete('compile')
+      clean_args(args, :strict)
+      clean_args(args, :style)
+      clean_args(args, :log_level)
+      clean_args(args, :env)
+      if value = options[:strict]
+        args << "-Dgwt.compile.strict=#{value}"
+      end
+      if value = options[:style]
+        args << "-Dgwt.style=#{value}"
+      end
+      if value = options[:log_level]
+        args << "-Dgwt.logLevel=#{value}"
+      end
+      if value = options[:env]
+        args << "-P#{value}"
+      end
+
+      exec ["compile", "gwt:compile", args].flatten!
+    end
   end
-
-  desc 'new', "this is just a wrapper to call 'rails new' without javascript and sprockets. if you run this command with MRI then the Gemfile will get a jruby section so the gwt developement shell can use JRuby. see 'rails new' for details on options."
-  method_option :template, :aliases => '-m', :type => :string, :desc => 'applies template, i.e. http://datamapper.org/templates/rails.rb if you want to datamapper as ORM'
-  def new
-    # dummy to create the above help message
+  if ARGV[0] =~ /^r/
+    ARGV[0] = 'server'
   end
-
-  def help(*args)
-    super
-#    exec ["rails3:new", "-Dargs=--help"] if File.exists?('Gemfile')
-  end
-
-  desc "run [maven_options]", "starts the GWT development shell"
-  method_option :log_level, :type => :string, :desc => 'log level: INFO, DEBUG. default: INFO'
-  method_option :jruby_version, :type => :string, :desc => 'jruby version to run jetty'
-  method_option :jruby_rack_version, :type => :string, :desc => 'jruby-rack version used to setup rails within jetty'
-  def server(*args)
-    args = ARGV.dup
-    args.delete('server')
-    clean_args(args, :jruby_version)
-    clean_args(args, :jruby_rack_version)
-    clean_args(args, :log_level)
-    if version = args.delete(:jruby_version)
-      args << "-Djruby.version=#{version}"
-    end
-    if version = args.delete(:jruby_rack_version)
-      args << "-Djruby.rack.version=#{version}"
-    end
-    if level = args.delete(:log_level)
-      args << "-Dgwt.logLevel=#{level}"
-    end
-
-    exec ["gwt:run", args].flatten!
-  end
-
-  desc "compile [maven_options]", "compiles the gwt java code to javascript"
-  #method_option :draft, :type => :boolean, :desc => 'draft compile. default: true (development), false (production)'
-  method_option :env, :type => :string, :desc => 'development or production'
-  method_option :strict, :type => :boolean, :desc => 'strict compile. default: false'
-  method_option :style, :type => :string, :desc => 'javascript style: DETAILED, PRETTY, OBF, OBFUSCATED. default: DETAILED (development), OBF (production)'
-  method_option :log_level, :type => :string, :desc => 'log level: INFO, DEBUG. default: INFO'
-  def compile(*args)
-    args = ARGV.dup
-    args.delete('compile')
-    clean_args(args, :strict)
-    clean_args(args, :style)
-    clean_args(args, :log_level)
-    clean_args(args, :env)
-    if value = options[:strict]
-      args << "-Dgwt.compile.strict=#{value}"
-    end
-    if value = options[:style]
-      args << "-Dgwt.style=#{value}"
-    end
-    if value = options[:log_level]
-      args << "-Dgwt.logLevel=#{value}"
-    end
-    if value = options[:env]
-      args << "-P#{value}"
-    end
-
-    exec ["compile", "gwt:compile", args].flatten!
-  end
-end
-if ARGV[0] =~ /^r/
-  ARGV[0] = 'server'
-end
 
   GWTCommand.start
 end

@@ -1,283 +1,249 @@
 package <%= views_package %>;
 
-<% if !options[:singleton] || attributes.detect { |a| a.type == :belongs_to} -%>
-import java.util.List;
-
-<% end -%>
-<% unless options[:read_only] -%>
-import javax.inject.Inject;
-<% end -%>
-
+import <%= base_package %>.<%= application_class_name %>Confirmation;
 import <%= editors_package %>.<%= class_name %>Editor;
-<% for attribute in attributes -%>
-<% if attribute.type == :belongs_to -%>
-import <%= models_package %>.<%= attribute.name.classify %>;
-<% end -%>
-<% end -%>
-<% unless options[:read_only] -%>
-<% unless class_name == 'User' -%>
-import <%= models_package %>.User;
-<% end -%>
-<% end -%>
 import <%= models_package %>.<%= class_name %>;
-import <%= places_package %>.<%= class_name %>Place;
+import <%= presenters_package %>.<%= class_name %>Presenter;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.editor.client.SimpleBeanEditorDriver;
 import com.google.gwt.event.dom.client.ClickEvent;
-<% unless options[:singleton] -%>
-import com.google.gwt.event.dom.client.ClickHandler;
-<% end -%>
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
-<% unless options[:read_only] -%>
 import com.google.gwt.uibinder.client.UiHandler;
-<% end -%>
 import com.google.gwt.uibinder.client.UiTemplate;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
-<% unless options[:singleton] -%>
-import com.google.gwt.user.client.ui.FlexTable;
-<% end -%>
-import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.Widget;
-import com.google.inject.Singleton;
 
-import <%= gwt_rails_package %>.places.RestfulAction;
-import <%= gwt_rails_package %>.places.RestfulActionEnum;
-import static <%= gwt_rails_package %>.places.RestfulActionEnum.*;
-<% unless options[:read_only] -%>
-import <%= gwt_rails_package %>.session.SessionManager;
-<% end -%>
-<% unless options[:singleton] -%>
-import <%= gwt_rails_package %>.views.ModelButton;
+<% if options[:gin] -%>
+import javax.inject.Inject;
+import javax.inject.Singleton;
 <% end -%>
 
+<% if options[:gin] -%>
 @Singleton
+<% end -%>
 public class <%= class_name %>ViewImpl extends Composite implements <%= class_name %>View {
 
-    @UiTemplate("<%= class_name %>View.ui.xml")
-    interface Binder extends UiBinder<Widget, <%= class_name %>ViewImpl> {}
-    
-    private static Binder BINDER = GWT.create(Binder.class);
+  @UiTemplate("<%= class_name %>View.ui.xml")
+  interface Binder extends UiBinder<Widget, <%= class_name %>ViewImpl> {}
 
-    interface EditorDriver extends SimpleBeanEditorDriver<<%= class_name %>, <%= class_name %>Editor> {}
+  interface EditorDriver extends SimpleBeanEditorDriver<<%= class_name %>, <%= class_name %>Editor> {}
 
-    private final EditorDriver editorDriver = GWT.create(EditorDriver.class);
+  private final Binder BINDER = GWT.create(Binder.class);
 
-<% unless options[:read_only] -%>
+  private final EditorDriver editorDriver = GWT.create(EditorDriver.class);
+
+  private final <%= application_class_name %>Confirmation confirmation;  
+
+  private <%= class_name %>Presenter presenter;
+<% if options[:optimistic] -%>
+  private boolean editable = false;
+<% end -%>
+  private boolean dirty = false;
+
+  @UiField <%= class_name %>Editor editor;
 <% unless options[:singleton] -%>
-    @UiField Button newButton;
-<% end -%>
-    @UiField Button editButton;
-    @UiField Button showButton;
-
-<% unless options[:singleton] -%>
-    @UiField Button createButton;
-<% end -%>
-    @UiField Button saveButton;
-<% unless options[:singleton] -%>
-    @UiField Button deleteButton;
-<% end -%>
-<% end -%>
-
-    @UiField Panel model;
-<% unless options[:singleton] -%>
-    @UiField FlexTable list;
-<% end -%>
-
-    @UiField <%= class_name %>Editor editor;
-
-    private Presenter presenter;
-<% unless options[:read_only] -%>
-
-    private final SessionManager<User> session;
-<% end -%>
-
-    public <%= class_name %>ViewImpl() {
-<% unless options[:read_only] -%>
-        this(null);
-    }
-
-    @Inject
-    public <%= class_name %>ViewImpl(SessionManager<User> session) {
-<% end -%>
-        initWidget(BINDER.createAndBindUi(this));
-        editorDriver.initialize(editor);
-<% unless options[:read_only] -%>
-        this.session = session;
-<% end -%>
-    }
-<% unless options[:read_only] -%>
-
-    private boolean isAllowed(RestfulActionEnum action){
-        return session == null || session.isAllowed(<%= class_name %>Place.NAME, action);
-    }
+  @UiField Button list;
 <% end -%>
 <% unless options[:read_only] -%>
 <% unless options[:singleton] -%>
-
-    @UiHandler("newButton")
-    void onClickNew(ClickEvent e) {
-        presenter.goTo(new <%= class_name %>Place(RestfulActionEnum.NEW));
-    }
+  @UiField Button n_e_w;
+<% end -%>
+<% if options[:optimistic] -%>
+  @UiField Button reload;
+<% end -%>
+  @UiField Button edit;
+<% unless options[:singleton] -%>
+  @UiField Button create;
+<% end -%>
+  @UiField Button save;
+  @UiField Button cancel;
+<% unless options[:singleton] -%>
+  @UiField Button delete;
+<% end -%>
 <% end -%>
 
-    @UiHandler("showButton")
-    void onClickShow(ClickEvent e) {
-        presenter.goTo(new <%= class_name %>Place(<% unless options[:singleton] -%>editor.id.getValue(), <% end -%>RestfulActionEnum.SHOW));
-    }
+<% if options[:gin] -%>
+  @Inject
+<% end -%>
+  public <%= class_name %>ViewImpl(<%= application_class_name %>Confirmation confirmation) {
+      this.confirmation = confirmation;
+      initWidget(BINDER.createAndBindUi(this));
+      editorDriver.initialize(editor);
+  }
 
-    @UiHandler("editButton")
-    void onClickEdit(ClickEvent e) {
-        presenter.goTo(new <%= class_name %>Place(<% unless options[:singleton] -%>editor.id.getValue(), <% end -%>RestfulActionEnum.EDIT));
-    }
+  @Override
+  public void setPresenter(<%= class_name %>Presenter presenter) {
+      this.presenter = presenter;
+  }
+
+  @Override
+  public void show(<%= class_name %> model){
+<% if options[:optimistic] -%>
+      editable = false;
+<% end -%>
+<% unless options[:read_only] -%>
+<% unless options[:singleton] -%>
+      n_e_w.setVisible(true);
+      create.setVisible(false);
+      delete.setVisible(true);
+<% end -%>
+<% if options[:optimistic] -%>
+      reload.setVisible(false);
+<% end -%>
+      edit.setVisible(true);
+      save.setVisible(false);
+      cancel.setVisible(false);
+<% end -%>
+      editorDriver.edit(model);
+      editor.setEnabled(false);
+  }
+<% unless options[:read_only] -%>
+<% if options[:optimistic] -%>
+
+  @Override
+  public void reload(<%= class_name %> model){
+      // inherit editable from screen before
+<% unless options[:singleton] -%>
+      n_e_w.setVisible(true);
+      create.setVisible(false);
+      delete.setVisible(false);
+<% end -%>
+      reload.setVisible(true);
+      edit.setVisible(false);
+      save.setVisible(false);
+      cancel.setVisible(false);
+      editorDriver.edit(model);
+      editor.setEnabled(editable);
+  }
+<% end -%>
+
+  @Override
+  public void edit(<%= class_name %> model){
+<% if options[:optimistic] -%>
+      editable = true;
+<% end -%>
+<% unless options[:singleton] -%>
+      n_e_w.setVisible(true);
+      create.setVisible(false);
+      delete.setVisible(true);
+<% end -%>
+<% if options[:optimistic] -%>
+      reload.setVisible(false);
+<% end -%>
+      edit.setVisible(false);
+      save.setVisible(true);
+      cancel.setVisible(true);
+      editorDriver.edit(model);
+      editor.setEnabled(<% if options[:cache] && options[:timestamps] -%>model.getUpdatedAt() != null<% else -%>true<% end -%>);
+  }
 <% unless options[:singleton] -%>
 
-    @UiHandler("createButton")
-    void onClickCreate(ClickEvent e) {
-        presenter.create();
-    }
+  @Override
+  public void new<%= class_name %>(){
+<% if options[:optimistic] -%>
+      editable = true;
 <% end -%>
+<% unless options[:singleton] -%>
+      n_e_w.setVisible(false);
+      create.setVisible(true);
+      delete.setVisible(false);
+<% end -%>
+<% if options[:optimistic] -%>
+      reload.setVisible(false);
+<% end -%>
+      edit.setVisible(false);
+      save.setVisible(false);
+      cancel.setVisible(false);
+      editorDriver.edit(new <%= class_name %>());
+      editor.setEnabled(true);
+  }
+<% end -%>
+<% end -%>
+<% if options[:cache] -%>
 
-    @UiHandler("saveButton")
-    void onClickSave(ClickEvent e) {
-        presenter.save();
-    }
+  @Override
+  public void reset(<%= class_name %> model) {
+      editorDriver.edit(model);
+<% if options[:timestamps] -%>
+      editor.setEnabled(editable);
+<% end -%>
+  }
+<% end -%>
 <% unless options[:singleton] -%>
 
-    @UiHandler("deleteButton")
-    void onClickDelete(ClickEvent e) {
-        presenter.delete(flush());
-    }
+  @UiHandler("list")
+  void onListClick(ClickEvent event) {
+      initDirty();
+      presenter.listAll();
+  }
 <% end -%>
-<% end -%>
-
-    public void setup(Presenter presenter, RestfulAction a) {
-        RestfulActionEnum action = RestfulActionEnum.valueOf(a);
-        this.presenter = presenter;
-<% if options[:singleton] -%>
-        editButton.setVisible((action == SHOW || action == INDEX) && isAllowed(EDIT));
-        saveButton.setVisible(action == EDIT);
-        showButton.setVisible(action == EDIT);
-        editor.setEnabled(!action.viewOnly());
-<% else -%>
 <% unless options[:read_only] -%>
-        newButton.setVisible(action != NEW && isAllowed(NEW));
-<% end -%>
-        if(action == INDEX){
-<% unless options[:read_only] -%>
-            editButton.setVisible(false);
-            showButton.setVisible(false);
-<% end -%>
-            list.setVisible(true);
-            model.setVisible(false);
-        }
-        else {
-<% unless options[:read_only] -%>
-            createButton.setVisible(action == NEW);
-            editButton.setVisible(action == SHOW && isAllowed(EDIT));
-            showButton.setVisible(action == EDIT);
-            saveButton.setVisible(action == EDIT);
-            deleteButton.setVisible(action == EDIT && isAllowed(DESTROY));
-<% end -%>
-            list.setVisible(false);
-            model.setVisible(true);
-        }
-        editor.setEnabled(!action.viewOnly());
-<% end -%>
-    }
-
-    public void edit(<%= class_name %> model) {
-        this.editorDriver.edit(model);
-        this.editor.resetVisibility();
-    }
-
-    public <%= class_name %> flush() {
-        return editorDriver.flush();
-    }
 <% unless options[:singleton] -%>
 
-    private final ClickHandler clickHandler = new ClickHandler() {
-        
-        @SuppressWarnings("unchecked")
-        public void onClick(ClickEvent event) {
-            ModelButton<<%= class_name %>> button = (ModelButton<<%= class_name %>>)event.getSource();
-            switch(button.action){
-<% unless options[:read_only] -%>
-                case DESTROY:
-                    presenter.delete(button.model);
-                    break;
+  @UiHandler("n_e_w")
+  void onNewClick(ClickEvent event) {
+      initDirty();
+      presenter.new<%= class_name %>();
+  }
+  
+  @UiHandler("create")
+  void onCreateClick(ClickEvent event) {
+      dirty = false;
+      presenter.create(editorDriver.flush());
+  }
+
+  @UiHandler("delete")
+  void onDeleteClick(ClickEvent event) {
+      String message = editorDriver.isDirty() ?
+          "really delete ? there are unsaved data !" :
+          "really delete ?";
+      if (confirmation.confirm(message)){
+          presenter.delete(editorDriver.flush());
+      }
+  }
 <% end -%>
-                default:
-                    presenter.goTo(new <%= class_name %>Place(button.model, button.action));
-            }
-        }
-    };
+<% if options[:optimistic] && !options[:read_only] -%>
 
-    private Button newButton(RestfulActionEnum action, <%= class_name %> model){
-        ModelButton<<%= class_name %>> button = new ModelButton<<%= class_name %>>(action, model);
-        button.addClickHandler(clickHandler);
-        return button;
-    }
-
-    public void reset(List<<%= class_name %>> models) {
-        list.removeAllRows();
-        list.setText(0, 0, "Id");
-<% index = 0 -%>
-<% attributes.each do |attribute| -%>
-<%   if !(attribute.type == :text && options[:read_only]) -%>
-<%     index = index + 1 -%>
-        list.setText(0, <%= index %>, "<%= attribute.name.humanize -%>");
-<%   end -%>
-<% end -%>
-        list.getRowFormatter().addStyleName(0, "gwt-rails-model-list-header");
-        int row = 1;
-        for(<%= class_name %> model: models){
-            setRow(row, model);
-            row++;
-        }
-    }
-
-    private void setRow(int row, <%= class_name %> model) {
-        list.setText(row, 0, model.getId() + "");
-<% index = 0 -%>
-<% attributes.each do |attribute| -%>
-<%   if attribute.type != :has_one && attribute.type != :has_many -%>
-<%     name = attribute.name.camelcase.sub(/^(.)/){ $1.downcase } -%>
-<%     if !(attribute.type == :text && options[:read_only]) -%>
-<%       index = index + 1 -%>
-        list.setText(row, <%= index %>, model.get<%= name.camelcase %>()<%= attribute.type == :has_one || attribute.type == :belongs_to ? ' == null ? "-" : model.get' + name.camelcase + '().toDisplay()' : ' + ""' %>);
-<%     end -%>
-<%   end -%>
+  @UiHandler("reload")
+  void onReloadClick(ClickEvent event) {
+      dirty = false;
+      if (editable) {
+          presenter.edit(<% unless options[:singleton] %>editor.id.getValue()<% end -%>);
+      }
+      else {
+          presenter.show(<% unless options[:singleton] %>editor.id.getValue()<% end -%>);
+      }
+  }
 <% end -%>
 
-        list.setWidget(row, <%= index + 1 %>, newButton(RestfulActionEnum.SHOW, model));
-<% unless options[:read_only] -%>
-        list.setWidget(row, <%= index + 2 %>, newButton(RestfulActionEnum.EDIT, model));
-        list.setWidget(row, <%= index + 3 %>, newButton(RestfulActionEnum.DESTROY, model));
-<% end -%>
-    }
-<% unless options[:read_only] -%>
+  @UiHandler("edit")
+  void onEditClick(ClickEvent event) {
+      initDirty();
+      presenter.edit(<% unless options[:singleton] %>editor.id.getValue()<% end -%>);
+  }
 
-    public void removeFromList(<%= class_name %> model) {
-        String id = model.getId() + "";
-        for(int i = 0; i < list.getRowCount(); i++){
-            if(list.getText(i, 0).equals(id)){
-                list.removeRow(i);
-                return;
-            }
-        }
-    }
-<% end -%>
-<% end -%>
-<% for attribute in attributes -%>
-<% if attribute.type == :belongs_to -%>
-<% clazz = attribute.name.classify -%>
+  @UiHandler("save")
+  void onSaveClick(ClickEvent event) {
+      dirty = false;
+      presenter.save(editorDriver.flush());
+  }
 
-    public void reset<%= clazz.to_s.pluralize %>(List<<%= clazz %>> list){
-        editor.reset<%= clazz.to_s.pluralize %>(list);
-    }
+  @UiHandler("cancel")
+  void onCancelClick(ClickEvent event) {
+      dirty = false;
+      presenter.show(<% unless options[:singleton] %>editor.id.getValue()<% end -%>);
+  }
 <% end -%>
-<% end -%>
+
+  private void initDirty(){
+      dirty = <% if options[:optimistic] -%>editable && <% end -%>(editorDriver == null ? false : editorDriver.isDirty());
+  }
+
+  @Override
+  public boolean isDirty() {
+      return dirty;
+  }
 }

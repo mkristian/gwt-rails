@@ -6,6 +6,7 @@ module Gwt
       def setup_options(opts = self.options)
         opts = opts.dup
         self.options = opts
+p opts
         file = File.join('config', 'gwt.yml')
         if File.exists?(file)
           c = YAML.load_file(file)
@@ -15,9 +16,11 @@ module Gwt
             end
           end
         end
+p opts
         if (opts[:cache] || opts[:store]) && opts[:singleton]
           say :warning, "singleton can not have store or cache (yet)"
         end
+        opts[:optimistic]   = false if opts[:read_only]
         opts[:timestamps]   = true if opts[:optimistic]
         opts[:cache]        = true if opts[:store]
         opts[:cache]        = false if opts[:singleton]

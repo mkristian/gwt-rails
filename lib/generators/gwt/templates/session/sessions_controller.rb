@@ -10,21 +10,15 @@ class SessionsController < ApplicationController
 
   def create
     auth = params[:authentication] || params
-    method = Rails.application.config.respond_to?(:remote_service_url) ? :create_remote : :create
-    @session = Session.send(method, auth[:login] || auth[:email], 
-                              auth[:password])
-    
+    @session = serializer(Session.create(auth[:login] || auth[:email], 
+                                         auth[:password]))
+
     if @session.valid?
       current_user(@session.user)
-      @session.idle_session_timeout = Rails.application.config.idle_session_timeout
+      @session.idle_session_timeout = <%= application_class_name %>::Application.config.idle_session_timeout
       @session.permissions = guard.permissions(current_groups)
 
-      # TODO make html login
-      respond_to do |format|
-        format.html { render :text => "authorized - but nothing further is implemented" }
-        format.xml  { render :xml => @session.to_xml }
-        format.json  { render :json => @session.to_json }
-      end
+      respond_with(@session)
     else
       head :unauthorized
     end
@@ -32,12 +26,12 @@ class SessionsController < ApplicationController
 
   def reset_password
     authentication = params[:authentication] || []
-    user = User.reset_password(authentication[:email] || authentication[:login])
+    login_or_email = authentication[:email] || authentication[:login]
 
-    if user
+    if Authentication.reset_password(login_or_email)
 
       # for the log
-      @session = user
+      @session = login_or_email
       
       head :ok
     else

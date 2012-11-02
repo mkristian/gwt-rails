@@ -1,8 +1,4 @@
 package <%= base_package %>;
-<% if options[:gin] -%>
-
-import <%= managed_package %>.<%= application_class_name %>Module;
-<% end -%>
 
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
@@ -25,7 +21,7 @@ import org.fusesource.restygwt.client.Defaults;
 public class <%= application_class_name %>EntryPoint implements EntryPoint {
 <% if options[:gin] -%>
 
-    @GinModules(<%= application_class_name %>Module.class)
+    @GinModules(<%= application_class_name %>GinModule.class)
     static public interface <%= application_class_name %>Ginjector extends Ginjector {
 <% if options[:place] -%>
         PlaceHistoryHandler getPlaceHistoryHandler();
